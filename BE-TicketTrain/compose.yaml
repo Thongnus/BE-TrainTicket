@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  elasticsearch:
+    image: 'docker.elastic.co/elasticsearch/elasticsearch:7.17.10'
+    environment:
+      - 'ELASTIC_PASSWORD=secret'
+      - 'discovery.type=single-node'
+      - 'xpack.security.enabled=false'
+    ports:
+      - '9200:9200'
+      - '9300:9300'
+    networks:
+      - railway_network
+
+  mysql:
+    image: mysql:latest
+    container_name: train_ticket_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 1
+      MYSQL_DATABASE: train_ticket_system
+      MYSQL_USER: Admin
+      MYSQL_PASSWORD: Admin#123
+
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+#      - ./train_ticket_db_Claude.sql:/docker-entrypoint-initdb.d/train_ticket_db_Claude.sql
+
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - railway_network
+
+  redis:
+    image: 'redis:latest'
+    ports:
+      - '6379:6379'
+    networks:
+      - railway_network
+
+volumes:
+  mysql_data:
+
+networks:
+  railway_network:
+    driver: bridge
