@@ -9,6 +9,12 @@ import com.example.betickettrain.entity.User;
 import com.example.betickettrain.security.JwtService;
 import com.example.betickettrain.service.RoleService;
 import com.example.betickettrain.service.UserServiceimp;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -26,12 +32,21 @@ import java.util.Set;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Authentication", description = "Authentication API endpoints")
+@CrossOrigin(origins = "*", maxAge = 3600)
+
 public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final UserServiceimp userService;
     private final RoleService roleService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    @Operation(summary = "User login", description = "Authenticate user and return JWT token")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully authenticated",
+                    content = @Content(schema = @Schema(implementation = JwtResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Invalid credentials")
+    })
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
@@ -57,7 +72,11 @@ public class AuthController {
             user.getAuthorities()
         ));
     }
-
+    @Operation(summary = "User registration", description = "Register a new user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User registered successfully"),
+            @ApiResponse(responseCode = "400", description = "Email or username already in use")
+    })
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@RequestBody SignupRequest signupRequest) throws Exception {
         log.info("Register attempt for user: {}", signupRequest.getUsername());
@@ -92,7 +111,12 @@ public class AuthController {
         
         return ResponseEntity.ok("User registered successfully!");
     }
-    
+    @Operation(summary = "Refresh token", description = "Get a new access token using refresh token")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "New token generated successfully"),
+            @ApiResponse(responseCode = "401", description = "Invalid refresh token")
+    })
+
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@RequestBody String refreshToken) {
         try {

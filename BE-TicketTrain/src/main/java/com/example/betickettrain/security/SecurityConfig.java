@@ -6,13 +6,16 @@ import com.example.betickettrain.service.UserService;
 import com.example.betickettrain.service.UserServiceimp;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -28,18 +31,18 @@ public class SecurityConfig {
 
     private final UserService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthFilter;
-//    private final AuthenticationEntryPointImpl unauthorizedHandler;
-    private final  AuthEntryPointJwt  authEntryPointJwt;
+    //    private final AuthenticationEntryPointImpl unauthorizedHandler;
+    private final AuthEntryPointJwt authEntryPointJwt;
+
     public SecurityConfig(
             UserService userDetailsService,
             JwtAuthenticationFilter jwtAuthFilter,
-            AuthEntryPointJwt  authEntryPointJwt, AuthEntryPointJwt authEntryPointJwt1
+            AuthEntryPointJwt authEntryPointJwt, AuthEntryPointJwt authEntryPointJwt1
 //            AuthenticationEntryPointImpl unauthorizedHandler
-            )
-            {
+    ) {
         this.userDetailsService = userDetailsService;
         this.jwtAuthFilter = jwtAuthFilter;
-                this.authEntryPointJwt = authEntryPointJwt1;
+        this.authEntryPointJwt = authEntryPointJwt1;
 
 //        this.unauthorizedHandler = unauthorizedHandler;
     }
@@ -47,19 +50,22 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .exceptionHandling(exception -> exception.authenticationEntryPoint(authEntryPointJwt))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/test/all").permitAll()
-                .requestMatchers("/api/test/user").hasRole("USER")
-                .requestMatchers("/api/test/admin").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            );
+                .csrf(AbstractHttpConfigurer::disable) // Nếu dùng JWT thì nên disable CSRF
+                .httpBasic(Customizer.withDefaults())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(exception -> exception.authenticationEntryPoint(authEntryPointJwt))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/test/all").permitAll()
+                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/api/test/user").hasRole("USER")
+                        .requestMatchers("/api/test/admin").hasRole("ADMIN")
+                        .anyRequest().authenticated()
+                );
 
-        http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-        
+   //     http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 

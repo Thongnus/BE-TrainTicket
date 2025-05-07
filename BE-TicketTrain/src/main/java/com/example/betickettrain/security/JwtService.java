@@ -15,7 +15,7 @@ import java.util.Map;
 @Component
 @Slf4j
 public class JwtService {
-    // Sử dụng @Value để cấu hình từ application.properties/yml
+    // Sử dụng @Value để cấu hình từ application-local.properties/yml
     @Value("${jwt.secret:defaultSecretKey}")
     private String secretKeyString;
 
