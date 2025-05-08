@@ -34,7 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             // Lấy JWT từ header
-            String jwt = parseJwt(request);
+             String jwt = parseJwt(request);
 
             // Nếu jwt không null và hợp lệ
             if (jwt != null && jwtService.validateJwtToken(jwt)) {

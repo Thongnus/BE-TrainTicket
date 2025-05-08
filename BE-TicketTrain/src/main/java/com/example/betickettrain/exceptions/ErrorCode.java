@@ -4,8 +4,6 @@ public enum ErrorCode {
 
     PAYMENT_METHOD_NOT_ALLOWED("E0317", "Payment method not allowed"),
     ;
-
-
     public final String code;
     public final String message;
 

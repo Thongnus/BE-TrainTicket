@@ -16,6 +16,7 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI openAPI() {
         return new OpenAPI()
+
                 .info(new Info()
                         .title("Train Ticket API Documentation")
                         .description("API documentation for Train Ticket application")

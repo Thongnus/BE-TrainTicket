@@ -47,28 +47,26 @@ public class AuthController {
                     content = @Content(schema = @Schema(implementation = JwtResponse.class))),
             @ApiResponse(responseCode = "401", description = "Invalid credentials")
     })
-
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) throws Exception {
         log.info("Login attempt for user: {}", loginRequest.getUsername());
-        
         Authentication authentication = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
         );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         User user = (User) authentication.getPrincipal();
-        
+
         String jwt = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
-        
+
         log.info("User {} successfully logged in", loginRequest.getUsername());
-        
+
         return ResponseEntity.ok(new JwtResponse(
-            jwt, 
+            jwt,
             refreshToken,
             user.getUserId(),
-            user.getUsername(), 
+            user.getUsername(),
             user.getAuthorities()
         ));
     }
@@ -80,7 +78,7 @@ public class AuthController {
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@RequestBody SignupRequest signupRequest) throws Exception {
         log.info("Register attempt for user: {}", signupRequest.getUsername());
-        
+
         if (userService.existsByUsername(signupRequest.getUsername())) {
             return ResponseEntity.badRequest()
                 .body("Error: Username is already taken!");
@@ -90,25 +88,25 @@ public class AuthController {
         User user = new User();
         user.setUsername(signupRequest.getUsername());
         user.setPassword(passwordEncoder.encode(signupRequest.getPassword()));
-        
+
         // Assign roles
         Set<Role> roles = new HashSet<>();
         Role userRole = roleService.findByName("ROLE_USER")
             .orElseThrow(() -> new Exception("Error: Role USER is not found"));
         roles.add(userRole);
-        
+
         // If admin role requested and authorized
         if (signupRequest.getRoles() != null && signupRequest.getRoles().contains("ADMIN")) {
             Role adminRole = roleService.findByName("ROLE_ADMIN")
                 .orElseThrow(() -> new RuntimeException("Error: Role ADMIN is not found"));
             roles.add(adminRole);
         }
-        
+
         user.setRoles(roles);
         userService.saveUser(user);
-        
+
         log.info("User {} registered successfully", signupRequest.getUsername());
-        
+
         return ResponseEntity.ok("User registered successfully!");
     }
     @Operation(summary = "Refresh token", description = "Get a new access token using refresh token")
@@ -124,12 +122,12 @@ public class AuthController {
                 return ResponseEntity.badRequest()
                     .body("Error: Invalid refresh token!");
             }
-            
+
             String username = jwtService.extractUsernameFromRefreshToken(refreshToken);
             User user = (User) userService.loadUserByUsername(username);
-            
+
             String newAccessToken = jwtService.generateToken(user);
-            
+
             return ResponseEntity.ok(new JwtResponse(
                 newAccessToken,
                 refreshToken,
@@ -143,4 +141,8 @@ public class AuthController {
                 .body("Error: Failed to refresh token");
         }
     }
+@GetMapping("/ping")
+public String ping() {
+    return "pong";
+}
 }
