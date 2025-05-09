@@ -29,7 +29,7 @@ public class Train {
     private String trainName;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('express', 'local', 'fast', 'sleeper')")
+    @Column(nullable = false, columnDefinition = "ENUM('express', 'local', 'fast', 'sleeper') NOT NULL")
     private TrainType trainType;
 
     @Column(nullable = false)

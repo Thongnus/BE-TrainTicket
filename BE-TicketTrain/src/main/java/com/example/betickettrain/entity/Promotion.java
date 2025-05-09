@@ -19,51 +19,56 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class Promotion {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "promotion_id")
     private Integer promotionId;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(name = "promotion_code", nullable = false, unique = true, length = 20)
     private String promotionCode;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "promotion_name", nullable = false, length = 100)
     private String promotionName;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('percentage', 'fixed_amount')")
+    @Column(name = "discount_type", nullable = false, columnDefinition = "ENUM('percentage', 'fixed_amount')")
     private DiscountType discountType;
 
-    @Column(nullable = false)
+    @Column(name = "discount_value", nullable = false)
     private Double discountValue;
 
-    @Column(columnDefinition = "DECIMAL(10,2) DEFAULT 0")
+    @Column(name = "minimum_purchase", columnDefinition = "DECIMAL(10,2) DEFAULT 0")
     private Double minimumPurchase;
 
+    @Column(name = "maximum_discount")
     private Double maximumDiscount;
 
-    @Column(nullable = false)
+    @Column(name = "start_date", nullable = false)
     private LocalDateTime startDate;
 
-    @Column(nullable = false)
+    @Column(name = "end_date", nullable = false)
     private LocalDateTime endDate;
 
+    @Column(name = "usage_limit")
     private Integer usageLimit;
 
-    @Column(columnDefinition = "INT DEFAULT 0")
+    @Column(name = "usage_count", columnDefinition = "INT DEFAULT 0")
     private Integer usageCount;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('active', 'inactive', 'expired') DEFAULT 'active'")
+    @Column(name = "status", nullable = false, columnDefinition = "ENUM('active', 'inactive', 'expired') DEFAULT 'active'")
     private Status status;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public enum DiscountType {

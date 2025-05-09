@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 public class BookingPromotion {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "booking_promotion_id")
     private Integer bookingPromotionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -31,10 +32,10 @@ public class BookingPromotion {
     @JoinColumn(name = "promotion_id", nullable = false)
     private Promotion promotion;
 
-    @Column(nullable = false)
+    @Column(name = "discount_amount", nullable = false)
     private Double discountAmount;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "applied_at", updatable = false)
     private LocalDateTime appliedAt;
 }

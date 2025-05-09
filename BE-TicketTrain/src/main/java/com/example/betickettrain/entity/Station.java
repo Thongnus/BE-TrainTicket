@@ -21,35 +21,37 @@ import java.time.LocalDateTime;
 public class Station {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "station_id")
     private Integer stationId;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "station_name", nullable = false, length = 100)
     private String stationName;
 
-    @Column(nullable = false, length = 255)
+    @Column(name = "location", nullable = false, length = 255)
     private String location;
 
-    @Column(nullable = false, length = 255)
+    @Column(name = "address", nullable = false, length = 255)
     private String address;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "city", nullable = false, length = 100)
     private String city;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "province", nullable = false, length = 100)
     private String province;
 
-    @Column(length = 20)
+    @Column(name = "phone", length = 20)
     private String phone;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('active', 'maintenance', 'closed') DEFAULT 'active'")
+    @Column(name = "status", nullable = false, columnDefinition = "ENUM('active', 'maintenance', 'closed') DEFAULT 'active'")
     private Status status;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public enum Status {

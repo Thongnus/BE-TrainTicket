@@ -20,28 +20,30 @@ import java.time.LocalDateTime;
 public class Seat {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "seat_id")
     private Integer seatId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "carriage_id", nullable = false)
     private Carriage carriage;
 
-    @Column(nullable = false, length = 10)
+    @Column(name = "seat_number", nullable = false, length = 10)
     private String seatNumber;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('window', 'aisle', 'middle', 'lower_berth', 'middle_berth', 'upper_berth')")
+    @Column(name = "seat_type", nullable = false, columnDefinition = "ENUM('window', 'aisle', 'middle', 'lower_berth', 'middle_berth', 'upper_berth')")
     private SeatType seatType;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('active', 'maintenance', 'unavailable') DEFAULT 'active'")
+    @Column(name = "status", nullable = false, columnDefinition = "ENUM('active', 'maintenance', 'unavailable') DEFAULT 'active'")
     private Status status;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public enum SeatType {

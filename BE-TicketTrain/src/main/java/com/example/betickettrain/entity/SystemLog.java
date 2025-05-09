@@ -20,30 +20,33 @@ import java.time.LocalDateTime;
 public class SystemLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "log_id") // Tên cột trong DB
     private Integer logId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id") // Tên cột trong DB
     private User user;
 
-    @Column(nullable = false, length = 255)
+    @Column(name = "action", nullable = false, length = 255) // Tên cột trong DB
     private String action;
 
-    @Column(nullable = false, length = 50)
+    @Column(name = "entity_type", nullable = false, length = 50) // Tên cột trong DB
     private String entityType;
 
+    @Column(name = "entity_id") // Tên cột trong DB
     private Integer entityId;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "description", columnDefinition = "TEXT") // Tên cột trong DB
     private String description;
 
-    @Column(length = 45)
+    @Column(name = "ip_address", length = 45) // Tên cột trong DB
     private String ipAddress;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "user_agent", columnDefinition = "TEXT") // Tên cột trong DB
     private String userAgent;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "log_time", updatable = false) // Tên cột trong DB
     private LocalDateTime logTime;
 }
+

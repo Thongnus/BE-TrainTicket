@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 public class TicketPrice {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "price_id") // Chỉ định tên cột rõ ràng
     private Integer priceId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -28,34 +29,35 @@ public class TicketPrice {
     private Route route;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('hard_seat', 'soft_seat', 'hard_sleeper', 'soft_sleeper', 'vip')")
+    @Column(name = "carriage_type", nullable = false, columnDefinition = "ENUM('hard_seat', 'soft_seat', 'hard_sleeper', 'soft_sleeper', 'vip')")
     private Carriage.CarriageType carriageType;
 
-    @Column(nullable = false)
+    @Column(name = "base_price", nullable = false)
     private Double basePrice;
 
-    @Column(columnDefinition = "DECIMAL(10,2) DEFAULT 0")
+    @Column(name = "weekend_surcharge", columnDefinition = "DECIMAL(10,2) DEFAULT 0")
     private Double weekendSurcharge;
 
-    @Column(columnDefinition = "DECIMAL(10,2) DEFAULT 0")
+    @Column(name = "holiday_surcharge", columnDefinition = "DECIMAL(10,2) DEFAULT 0")
     private Double holidaySurcharge;
 
-    @Column(columnDefinition = "DECIMAL(10,2) DEFAULT 0")
+    @Column(name = "peak_hour_surcharge", columnDefinition = "DECIMAL(10,2) DEFAULT 0")
     private Double peakHourSurcharge;
 
-    @Column(columnDefinition = "DECIMAL(5,2) DEFAULT 0")
+    @Column(name = "discount_rate", columnDefinition = "DECIMAL(5,2) DEFAULT 0")
     private Double discountRate;
 
-    @Column(nullable = false)
+    @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
-    @Column(nullable = false)
+    @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }

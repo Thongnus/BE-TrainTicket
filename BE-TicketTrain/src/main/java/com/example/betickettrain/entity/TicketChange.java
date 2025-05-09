@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 public class TicketChange {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "change_id") // Tên cột trong DB
     private Integer changeId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -42,34 +43,37 @@ public class TicketChange {
     @JoinColumn(name = "new_seat_id", nullable = false)
     private Seat newSeat;
 
-    @Column(nullable = false)
+    @Column(name = "change_fee", nullable = false) // Tên cột trong DB
     private Double changeFee;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "change_date", updatable = false) // Tên cột trong DB
     private LocalDateTime changeDate;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "reason", columnDefinition = "TEXT") // Tên cột trong DB
     private String reason;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('pending', 'processed', 'cancelled') DEFAULT 'pending'")
+    @Column(name = "status", nullable = false, columnDefinition = "ENUM('pending', 'processed', 'cancelled') DEFAULT 'pending'") // Tên cột trong DB
     private Status status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "processed_by")
     private User processedBy;
 
+    @Column(name = "processed_date") // Tên cột trong DB
     private LocalDateTime processedDate;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false) // Tên cột trong DB
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at") // Tên cột trong DB
     private LocalDateTime updatedAt;
 
     public enum Status {
         pending, processed, cancelled
     }
 }
+

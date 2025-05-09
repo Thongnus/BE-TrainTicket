@@ -22,41 +22,44 @@ import java.time.LocalDateTime;
 public class Booking {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "booking_id")
     private Integer bookingId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(name = "booking_code", nullable = false, unique = true, length = 20)
     private String bookingCode;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "booking_date", updatable = false)
     private LocalDateTime bookingDate;
 
-    @Column(nullable = false)
+    @Column(name = "total_amount", nullable = false)
     private Double totalAmount;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('pending', 'paid', 'refunded', 'cancelled') DEFAULT 'pending'")
+    @Column(name = "payment_status", nullable = false, columnDefinition = "ENUM('pending', 'paid', 'refunded', 'cancelled') DEFAULT 'pending'")
     private PaymentStatus paymentStatus;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('pending', 'confirmed', 'cancelled', 'completed') DEFAULT 'pending'")
+    @Column(name = "booking_status", nullable = false, columnDefinition = "ENUM('pending', 'confirmed', 'cancelled', 'completed') DEFAULT 'pending'")
     private BookingStatus bookingStatus;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('credit_card', 'bank_transfer', 'e_wallet', 'cash')")
+    @Column(name = "payment_method", nullable = false, columnDefinition = "ENUM('credit_card', 'bank_transfer', 'e_wallet', 'cash')")
     private PaymentMethod paymentMethod;
 
+    @Column(name = "payment_date")
     private LocalDateTime paymentDate;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public enum PaymentStatus {

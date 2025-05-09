@@ -40,7 +40,7 @@ public class Feedback {
     private LocalDateTime feedbackDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('pending', 'approved', 'rejected') DEFAULT 'pending'")
+    @Column(name = "status", nullable = false, columnDefinition = "ENUM('pending', 'approved', 'rejected') DEFAULT 'pending'")
     private Status status;
 
     public enum Status {

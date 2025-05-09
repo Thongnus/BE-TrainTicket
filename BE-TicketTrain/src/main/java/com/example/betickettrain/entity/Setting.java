@@ -20,24 +20,26 @@ import java.time.LocalDateTime;
 public class Setting {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "setting_id")
     private Integer settingId;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(name = "setting_key", nullable = false, unique = true, length = 100)
     private String settingKey;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name = "setting_value", nullable = false, columnDefinition = "TEXT")
     private String settingValue;
 
-    @Column(nullable = false, length = 50)
+    @Column(name = "setting_group", nullable = false, length = 50)
     private String settingGroup;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }

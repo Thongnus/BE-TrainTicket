@@ -20,31 +20,33 @@ import java.time.LocalDateTime;
 public class Carriage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "carriage_id")
     private Integer carriageId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "train_id", nullable = false)
     private Train train;
 
-    @Column(nullable = false, length = 10)
+    @Column(name = "carriage_number", nullable = false, length = 10)
     private String carriageNumber;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('hard_seat', 'soft_seat', 'hard_sleeper', 'soft_sleeper', 'vip')")
+    @Column(name = "carriage_type", nullable = false, columnDefinition = "ENUM('hard_seat', 'soft_seat', 'hard_sleeper', 'soft_sleeper', 'vip')")
     private CarriageType carriageType;
 
-    @Column(nullable = false)
+    @Column(name = "capacity", nullable = false)
     private Integer capacity;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('active', 'maintenance', 'retired') DEFAULT 'active'")
+    @Column(name = "status", nullable = false, columnDefinition = "ENUM('active', 'maintenance', 'retired') DEFAULT 'active'")
     private Status status;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public enum CarriageType {

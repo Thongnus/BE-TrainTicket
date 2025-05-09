@@ -8,10 +8,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-
-
 
 @Entity
 @Table(name = "tickets")
@@ -20,8 +17,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class Ticket {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "ticket_id")
     private Integer ticketId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -44,29 +43,31 @@ public class Ticket {
     @JoinColumn(name = "destination_station_id", nullable = false)
     private Station destinationStation;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "passenger_name", nullable = false, length = 100)
     private String passengerName;
 
-    @Column(nullable = false, length = 20)
+    @Column(name = "passenger_id_card", nullable = false, length = 20)
     private String passengerIdCard;
 
-    @Column(nullable = false)
+    @Column(name = "ticket_price", nullable = false)
     private Double ticketPrice;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(name = "ticket_code", nullable = false, unique = true, length = 20)
     private String ticketCode;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('booked', 'checked_in', 'cancelled', 'used', 'expired') DEFAULT 'booked'")
+    @Column(name = "ticket_status", nullable = false, columnDefinition = "ENUM('booked', 'checked_in', 'cancelled', 'used', 'expired') DEFAULT 'booked'")
     private Status status;
 
+    @Column(name = "boarding_time")
     private LocalDateTime boardingTime;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public enum Status {

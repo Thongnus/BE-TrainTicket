@@ -18,11 +18,13 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class Route {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "route_id")
     private Integer routeId;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "route_name", nullable = false, length = 100)
     private String routeName;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -33,21 +35,26 @@ public class Route {
     @JoinColumn(name = "destination_station_id", nullable = false)
     private Station destinationStation;
 
-    @Column(nullable = false)
+    @Column(name = "distance", nullable = false)
     private Float distance;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('active', 'inactive', 'maintenance') DEFAULT 'active'")
+    @Column(
+            name = "status",
+            nullable = false,
+            columnDefinition = "ENUM('active', 'inactive', 'maintenance') DEFAULT 'active'"
+    )
     private Status status;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public enum Status {

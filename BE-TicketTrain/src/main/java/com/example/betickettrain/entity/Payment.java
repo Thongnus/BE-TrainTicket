@@ -18,40 +18,43 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class Payment {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "payment_id")
     private Integer paymentId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;
 
-    @Column(nullable = false)
+    @Column(name = "payment_amount", nullable = false)
     private Double paymentAmount;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "payment_date", updatable = false)
     private LocalDateTime paymentDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('credit_card', 'bank_transfer', 'e_wallet', 'cash')")
+    @Column(name = "payment_method", nullable = false, columnDefinition = "ENUM('credit_card', 'bank_transfer', 'e_wallet', 'cash')")
     private Booking.PaymentMethod paymentMethod;
 
-    @Column(length = 100)
+    @Column(name = "transaction_id", length = 100)
     private String transactionId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending'")
+    @Column(name = "payment_status", nullable = false, columnDefinition = "ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending'")
     private Status status;
 
-    @Column(columnDefinition = "JSON")
+    @Column(name = "payment_details", columnDefinition = "JSON")
     private String paymentDetails;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public enum Status {

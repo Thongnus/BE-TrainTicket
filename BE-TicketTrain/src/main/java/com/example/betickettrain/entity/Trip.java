@@ -44,7 +44,7 @@ public class Trip {
     @Column(nullable = false, columnDefinition = "ENUM('scheduled', 'delayed', 'cancelled', 'completed') DEFAULT 'scheduled'")
     private Status status;
 
-    @Column(columnDefinition = "INT DEFAULT 0")
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
     private Integer delayMinutes;
 
     @CreationTimestamp

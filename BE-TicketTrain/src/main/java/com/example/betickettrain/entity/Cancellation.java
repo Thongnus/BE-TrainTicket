@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 public class Cancellation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "cancellation_id")
     private Integer cancellationId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -28,31 +29,35 @@ public class Cancellation {
     private Ticket ticket;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "cancellation_date", updatable = false)
     private LocalDateTime cancellationDate;
 
+    @Column(name = "refund_amount")
     private Double refundAmount;
 
+    @Column(name = "cancellation_fee")
     private Double cancellationFee;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "reason", columnDefinition = "TEXT")
     private String reason;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('pending', 'approved', 'rejected', 'refunded') DEFAULT 'pending'")
+    @Column(name = "status", nullable = false, columnDefinition = "ENUM('pending', 'approved', 'rejected', 'refunded') DEFAULT 'pending'")
     private Status status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "processed_by")
     private User processedBy;
 
+    @Column(name = "processed_date")
     private LocalDateTime processedDate;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public enum Status {

@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 public class RouteStation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "route_station_id")
     private Integer routeStationId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -30,22 +31,23 @@ public class RouteStation {
     @JoinColumn(name = "station_id", nullable = false)
     private Station station;
 
-    @Column(nullable = false)
+    @Column(name = "stop_order", nullable = false)
     private Integer stopOrder;
 
-    @Column(nullable = false)
+    @Column(name = "arrival_offset", nullable = false)
     private Integer arrivalOffset;
 
-    @Column(nullable = false)
+    @Column(name = "departure_offset", nullable = false)
     private Integer departureOffset;
 
-    @Column(nullable = false)
+    @Column(name = "distance_from_origin", nullable = false)
     private Float distanceFromOrigin;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }
