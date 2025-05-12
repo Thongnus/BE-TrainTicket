@@ -35,7 +35,25 @@ services:
       retries: 3
     networks:
       - railway_network
+  train_ticket_system:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - '8080:8080'
+        environment:
+            - DB_HOST=mysql
+            - DB_PORT=3306
+            - DB_USER=Admin
+            - DB_PASSWORD=Admin#123
+            - DB_NAME=train_ticket_system
+#            - ELASTICSEARCH_HOST=elasticsearch
+#            - ELASTICSEARCH_PORT=9200
+        depends_on:
+            - mysql
 
+        networks:
+            - railway_network
   redis:
     image: 'redis:latest'
     ports:
