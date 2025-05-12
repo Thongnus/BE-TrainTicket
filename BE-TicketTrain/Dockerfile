@@ -1,5 +1,5 @@
-# Build stage
-FROM eclipse-temurin:24-jdk-jammy as builder
+# Build stage - sử dụng JDK 20
+FROM eclipse-temurin:20-jdk-jammy as builder
 
 WORKDIR /app
 COPY pom.xml .
@@ -8,8 +8,8 @@ COPY src ./src
 # Build ứng dụng và tạo file jar
 RUN ./mvnw clean package -DskipTests
 
-# Runtime stage
-FROM eclipse-temurin:24-jre-jammy
+# Runtime stage - sử dụng JRE 20 (đồng bộ với JDK build)
+FROM eclipse-temurin:20-jre-jammy
 
 WORKDIR /app
 
