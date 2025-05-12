@@ -1,24 +1,34 @@
 -- Tạo cơ sở dữ liệu
-CREATE DATABASE IF NOT EXISTS train_ticket_system;
-USE train_ticket_system;
 
 -- Bảng lưu thông tin người dùng
 CREATE TABLE users (
-    user_id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    full_name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    phone VARCHAR(20) NOT NULL,
-    address VARCHAR(255),
-    id_card VARCHAR(20) NOT NULL UNIQUE,
-    date_of_birth DATE,
-    role ENUM('customer', 'admin', 'staff') NOT NULL DEFAULT 'customer',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_username (username),
-    INDEX idx_email (email)
+                       user_id INT AUTO_INCREMENT PRIMARY KEY,
+                       username VARCHAR(50) NOT NULL UNIQUE,
+                       password VARCHAR(255) NOT NULL,
+                       full_name VARCHAR(100) NOT NULL,
+                       email VARCHAR(100) NOT NULL UNIQUE,
+                       phone VARCHAR(20) NOT NULL,
+                       address VARCHAR(255),
+                       id_card VARCHAR(20) NOT NULL UNIQUE,
+                       date_of_birth DATE,
+                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                       INDEX idx_username (username),
+                       INDEX idx_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE roles (
+                       role_id INT AUTO_INCREMENT PRIMARY KEY,
+                       name VARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE users_roles (
+                             user_id INT NOT NULL,
+                             role_id INT NOT NULL,
+                             PRIMARY KEY (user_id, role_id),
+                             FOREIGN KEY (user_id) REFERENCES users(user_id),
+                             FOREIGN KEY (role_id) REFERENCES roles(role_id)
+);
 
 -- Bảng lưu thông tin ga tàu
 CREATE TABLE stations (
@@ -307,7 +317,14 @@ CREATE TABLE promotions (
     INDEX idx_end_date (end_date),
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+-- bảng lưu new feed
+CREATE TABLE newfeed (
+                         newfeed_id INT AUTO_INCREMENT PRIMARY KEY,
+                         title VARCHAR(255) NOT NULL,
+                         description TEXT NOT NULL,
+                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 -- Bảng lưu thông tin sử dụng khuyến mãi
 CREATE TABLE booking_promotions (
     booking_promotion_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -362,6 +379,19 @@ CREATE TABLE settings (
     INDEX idx_setting_group (setting_group)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE carriage_amenities (
+                                    carriage_amenity_id INT AUTO_INCREMENT PRIMARY KEY,
+                                    carriage_id INT NOT NULL,
+                                    wifi BOOLEAN DEFAULT FALSE,
+                                    power_plug BOOLEAN DEFAULT FALSE,
+                                    food BOOLEAN DEFAULT FALSE,
+                                    tv BOOLEAN DEFAULT FALSE,
+                                    massage_chair BOOLEAN DEFAULT FALSE,
+                                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                    FOREIGN KEY (carriage_id) REFERENCES carriages(carriage_id) ON DELETE CASCADE,
+                                    UNIQUE KEY unique_carriage_amenity (carriage_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 -- Tạo View hiển thị số lượng ghế còn trống theo chuyến tàu
 CREATE VIEW available_seats_view AS
 SELECT 
@@ -434,6 +464,7 @@ GROUP BY r.route_name, tr.train_type, c.carriage_type;
 
 -- Tạo Stored Procedure tìm kiếm chuyến tàu
 DELIMITER //
+DELIMITER //
 CREATE PROCEDURE search_trips(
     IN p_origin_station_id INT,
     IN p_destination_station_id INT,
@@ -441,37 +472,49 @@ CREATE PROCEDURE search_trips(
     IN p_passengers INT
 )
 BEGIN
-    SELECT 
-        t.trip_id,
-        t.trip_code,
-        t.departure_time,
-        t.arrival_time,
-        r.route_name,
-        tr.train_number,
-        tr.train_type,
-        os.station_name AS origin_station,
-        ds.station_name AS destination_station,
-        TIMEDIFF(t.arrival_time, t.departure_time) AS duration,
-        MIN(tp.base_price) AS min_price,
-        MAX(tp.base_price) AS max_price
-    FROM trips t
-    JOIN routes r ON t.route_id = r.route_id
-    JOIN trains tr ON t.train_id = tr.train_id
-    JOIN route_stations rs_origin ON rs_origin.route_id = r.route_id AND rs_origin.station_id = p_origin_station_id
-    JOIN route_stations rs_dest ON rs_dest.route_id = r.route_id AND rs_dest.station_id = p_destination_station_id
-    JOIN stations os ON p_origin_station_id = os.station_id
-    JOIN stations ds ON p_destination_station_id = ds.station_id
-    JOIN ticket_prices tp ON tp.route_id = r.route_id AND tp.start_date <= p_departure_date AND tp.end_date >= p_departure_date
-    WHERE DATE(t.departure_time) = p_departure_date
-        AND rs_origin.stop_order < rs_dest.stop_order
-        AND t.status = 'scheduled'
-    GROUP BY t.trip_id
-    HAVING (
-        SELECT MIN(av.available_seats) 
-        FROM available_seats_view av 
-        WHERE av.trip_id = t.trip_id
+SELECT
+    t.trip_id,
+    t.trip_code,
+    t.departure_time,
+    t.arrival_time,
+    r.route_name,
+    tr.train_number,
+    tr.train_type,
+    os.station_name AS origin_station,
+    ds.station_name AS destination_station,
+    TIMEDIFF(t.arrival_time, t.departure_time) AS duration,
+    MIN(tp.base_price) AS min_price,
+    MAX(tp.base_price) AS max_price,
+    GROUP_CONCAT(
+            CONCAT(
+                    c.carriage_type, ': ',
+                    'wifi=', IF(ca.wifi, 'true', 'false'), ', ',
+                    'powerPlug=', IF(ca.power_plug, 'true', 'false'), ', ',
+                    'food=', IF(ca.food, 'true', 'false'), ', ',
+                    'tv=', IF(ca.tv, 'true', 'false'), ', ',
+                    'massageChair=', IF(ca.massage_chair, 'true', 'false')
+            ) SEPARATOR ' | '
+    ) AS amenities
+FROM trips t
+         JOIN routes r ON t.route_id = r.route_id
+         JOIN trains tr ON t.train_id = tr.train_id
+         JOIN route_stations rs_origin ON rs_origin.route_id = r.route_id AND rs_origin.station_id = p_origin_station_id
+         JOIN route_stations rs_dest ON rs_dest.route_id = r.route_id AND rs_dest.station_id = p_destination_station_id
+         JOIN stations os ON p_origin_station_id = os.station_id
+         JOIN stations ds ON p_destination_station_id = ds.station_id
+         JOIN ticket_prices tp ON tp.route_id = r.route_id AND tp.start_date <= p_departure_date AND tp.end_date >= p_departure_date
+         JOIN carriages c ON c.train_id = tr.train_id
+         LEFT JOIN carriage_amenities ca ON c.carriage_id = ca.carriage_id
+WHERE DATE(t.departure_time) = p_departure_date
+  AND rs_origin.stop_order < rs_dest.stop_order
+  AND t.status = 'scheduled'
+GROUP BY t.trip_id
+HAVING (
+    SELECT MIN(av.available_seats)
+    FROM available_seats_view av
+    WHERE av.trip_id = t.trip_id
     ) >= p_passengers
-    ORDER BY t.departure_time;
+ORDER BY t.departure_time;
 END //
 DELIMITER ;
 

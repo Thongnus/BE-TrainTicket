@@ -60,7 +60,7 @@ public class SecurityConfig {
                                 "/v3/api-docs.yaml", "/configuration/**").permitAll()
                         .requestMatchers("/api/test/user").hasRole("USER")
                         .requestMatchers("/api/test/admin").hasRole("ADMIN")
-                        .anyRequest().permitAll()
+                        .anyRequest().authenticated()
                 );
               http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                       .exceptionHandling(exception -> exception.authenticationEntryPoint(authEntryPointJwt))

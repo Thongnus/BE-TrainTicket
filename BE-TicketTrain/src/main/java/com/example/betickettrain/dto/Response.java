@@ -7,15 +7,16 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.http.HttpStatus;
 
+
+@AllArgsConstructor
 @Getter
 @Setter
-@AllArgsConstructor
 public class Response<T> {
-    T data;
-    int status = HttpStatus.OK.value();
-    String errorCode;
-    String errorMessage;
-    String message;
+    private T data;
+    private int status = HttpStatus.OK.value();
+    private String code = "SUCCESS";
+    private String message = "Thành công";
+    private long timestamp = System.currentTimeMillis();
 
     public Response() {}
 
@@ -23,11 +24,22 @@ public class Response<T> {
         this.data = data;
     }
 
-    public Response(int status, String errorCode, String errorMessage) {
-        super();
-        this.status = status;
-        this.errorCode = errorCode;
-        this.errorMessage = errorMessage;
-        this.message = errorMessage;
+    // Static factory methods
+    public static <T> Response<T> of(T data) {
+        return new Response<>(data);
+    }
+
+    public static <T> Response<T> of(T data, String message) {
+        Response<T> response = new Response<>(data);
+        response.setMessage(message);
+        return response;
+    }
+
+    public static <T> Response<T> error(int status, String code, String message) {
+        Response<T> response = new Response<>();
+        response.setStatus(status);
+        response.setCode(code);
+        response.setMessage(message);
+        return response;
     }
 }

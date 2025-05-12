@@ -9,9 +9,10 @@ import lombok.RequiredArgsConstructor;
 @Data
 @AllArgsConstructor
 @RequiredArgsConstructor
-@Table(name = "role")
+@Table(name = "roles")
 public class Role {
     @Id
+    @Column(name = "role_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private  int id;
     @Column(name = "name")
