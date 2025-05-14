@@ -13,9 +13,5 @@ public interface NewFeedService {
     NewfeedDto createNewfeed(NewfeedDto createDto);
     NewfeedDto updateNewfeed(Long id, NewfeedDto updateDto);
     void deleteNewfeed(Long id);
-
-    // Các phương thức tìm kiếm, lọc cũng trả về DTO
-    List<NewfeedDto> searchNewfeeds(String keyword);
-    List<NewfeedDto> getNewfeedsByCategory(String category);
 }
 

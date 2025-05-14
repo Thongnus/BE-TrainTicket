@@ -1,7 +1,7 @@
 package com.example.betickettrain.configuration;
 
 import com.example.betickettrain.security.JwtService;
-import com.example.betickettrain.service.UserServiceimp;
+import com.example.betickettrain.service.ServiceImpl.UserServiceimp;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

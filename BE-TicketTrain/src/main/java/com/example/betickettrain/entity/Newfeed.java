@@ -1,6 +1,7 @@
 package com.example.betickettrain.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -8,6 +9,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "newfeed")
+@Data
 public class Newfeed {
 
     @Id

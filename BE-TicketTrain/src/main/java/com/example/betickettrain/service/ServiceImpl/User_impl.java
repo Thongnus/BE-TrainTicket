@@ -1,9 +1,10 @@
-package com.example.betickettrain.service;
+package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.entity.Role;
 import com.example.betickettrain.entity.User;
 import com.example.betickettrain.repository.RoleRepository;
 import com.example.betickettrain.repository.UserRepository;
+import com.example.betickettrain.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

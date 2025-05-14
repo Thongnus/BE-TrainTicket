@@ -1,4 +1,4 @@
-package com.example.betickettrain.service;
+package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.entity.User;
 import com.example.betickettrain.repository.RoleRepository;
@@ -23,7 +23,6 @@ public class UserServiceimp implements UserDetailsService {
 
     @Override
     @Transactional
-    @Cacheable(value = "userCache", key = "#username")
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         log.debug("Fetching user details for username: {}", username);
 

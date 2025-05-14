@@ -8,7 +8,7 @@ import com.example.betickettrain.entity.Role;
 import com.example.betickettrain.entity.User;
 import com.example.betickettrain.security.JwtService;
 import com.example.betickettrain.service.RoleService;
-import com.example.betickettrain.service.UserServiceimp;
+import com.example.betickettrain.service.ServiceImpl.UserServiceimp;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
