@@ -1,9 +1,12 @@
-package com.example.betickettrain.service;
+package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.dto.NewfeedDto;
 import com.example.betickettrain.entity.Newfeed;
 import com.example.betickettrain.mapper.NewfeedMapper;
 import com.example.betickettrain.repository.NewfeedRepository;
+import com.example.betickettrain.service.GenericCacheService;
+import com.example.betickettrain.service.NewFeedService;
+import com.example.betickettrain.util.Constants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,13 +20,13 @@ public class NewFeedServiceImpl implements NewFeedService {
     private final NewfeedMapper newfeedMapper;
     private final GenericCacheService cacheService;
 
-    private static final String CACHE_NAME = "newfeed";
+
     private static final String ALL_FEEDS_KEY = "all";
 
     @Override
     public List<NewfeedDto> getAllNewfeeds() {
         // Kiểm tra cache trước
-        List<NewfeedDto> cached = cacheService.get(CACHE_NAME, ALL_FEEDS_KEY);
+        List<NewfeedDto> cached = cacheService.get(Constants.Cache.CACHE_NEWFEED, ALL_FEEDS_KEY);
         if (cached != null) {
             return cached;
         }
@@ -34,7 +37,7 @@ public class NewFeedServiceImpl implements NewFeedService {
                 .map(newfeedMapper::toDto)
                 .toList();
 
-        cacheService.put(CACHE_NAME, ALL_FEEDS_KEY, dtos);
+        cacheService.put(Constants.Cache.CACHE_NEWFEED, ALL_FEEDS_KEY, dtos);
         return dtos;
     }
 
@@ -42,7 +45,7 @@ public class NewFeedServiceImpl implements NewFeedService {
     public NewfeedDto createNewfeed(NewfeedDto newfeedDto) {
         Newfeed newfeed = newfeedMapper.toEntity(newfeedDto);
         newfeed = newfeedRepository.save(newfeed);
-        cacheService.clearCache(CACHE_NAME); // clear toàn bộ cache newfeed
+        cacheService.clearCache(Constants.Cache.CACHE_NEWFEED); // clear toàn bộ cache newfeed
         return newfeedMapper.toDto(newfeed);
     }
 
@@ -56,28 +59,28 @@ public class NewFeedServiceImpl implements NewFeedService {
                 .orElseThrow(() -> new RuntimeException("Newfeed not found with id: " + id));
 
         // Cập nhật cache: xóa cả danh sách và từng phần tử
-        cacheService.remove(CACHE_NAME, ALL_FEEDS_KEY);
-        cacheService.remove(CACHE_NAME, id);
+        cacheService.remove(Constants.Cache.CACHE_NEWFEED, ALL_FEEDS_KEY);
+        cacheService.remove(Constants.Cache.CACHE_NEWFEED, id);
         return updated;
     }
 
     @Override
     public NewfeedDto getNewfeedById(Long id) {
-        NewfeedDto cached = cacheService.get(CACHE_NAME, id);
+        NewfeedDto cached = cacheService.get(Constants.Cache.CACHE_NEWFEED, id);
         if (cached != null) return cached;
 
         NewfeedDto dto = newfeedRepository.findById(id)
                 .map(newfeedMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("Newfeed not found with id: " + id));
 
-        cacheService.put(CACHE_NAME, id, dto);
+        cacheService.put(Constants.Cache.CACHE_NEWFEED, id, dto);
         return dto;
     }
 
     @Override
     public void deleteNewfeed(Long id) {
         newfeedRepository.deleteById(id);
-        cacheService.remove(CACHE_NAME, id);
-        cacheService.remove(CACHE_NAME, ALL_FEEDS_KEY); // cập nhật lại danh sách sau khi xóa
+        cacheService.remove(Constants.Cache.CACHE_NEWFEED, id);
+        cacheService.remove(Constants.Cache.CACHE_NEWFEED, ALL_FEEDS_KEY); // cập nhật lại danh sách sau khi xóa
     }
 }

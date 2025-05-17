@@ -21,7 +21,8 @@ public class User_impl implements UserService {
 
     @Autowired
     RoleRepository role_Reponsitory;
-@Autowired
+
+    @Autowired
     public User_impl(UserRepository userReponsitory) {
         this.userRepository = userReponsitory;
 
@@ -32,6 +33,7 @@ public class User_impl implements UserService {
         return userRepository.findByUsername(name);
 
     }
+
     //cần lưu ý
     @Override
     public User saveTT(User user) {
@@ -41,18 +43,18 @@ public class User_impl implements UserService {
         System.out.println(encodedPassword);
 
 
-         Role r=   role_Reponsitory.findByName("ROLE_USER");
-         if(r!=null){
-             user.getRoles().add(r);
+        Role r = role_Reponsitory.findByName("ROLE_USER");
+        if (r != null) {
+            user.getRoles().add(r);
 
-         }else {Set<Role> rr = new HashSet<>();
-        rr.add(new Role("ROLE_USER"));
-        user.setRoles(rr);}
+        } else {
+            Set<Role> rr = new HashSet<>();
+            rr.add(new Role("ROLE_USER"));
+            user.setRoles(rr);
+        }
         return userRepository.save(user);
 
     }
-
-
 
 
     @Override
@@ -60,7 +62,7 @@ public class User_impl implements UserService {
         return userRepository.findAll(pageable);
     }
 
-     @Override
+    @Override
     public User updatepassword(User user) {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         String encodedPassword = encoder.encode(user.getPassword());
@@ -78,6 +80,7 @@ public class User_impl implements UserService {
         System.out.println(encodedPassword);
         return userRepository.save(user);
     }
+
     @Override
     public User updatenopassword(User user) {
 
@@ -92,7 +95,7 @@ public class User_impl implements UserService {
 
     @Override
     public void deleteuserbyID(int id) {
-         userRepository.deleteById(id);
+        userRepository.deleteById(id);
     }
 
     @Override

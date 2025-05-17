@@ -30,7 +30,6 @@ public class GenericCacheService {
     public <K, V> void put(String cacheName, K key, V value) {
         Map<Object, Object> cache = caches.computeIfAbsent(cacheName, k -> new ConcurrentHashMap<>());
         cache.put(key, value);
-
         String redisKey = buildRedisKey(cacheName, key);
         redisCacheService.cacheData(redisKey, value);
     }

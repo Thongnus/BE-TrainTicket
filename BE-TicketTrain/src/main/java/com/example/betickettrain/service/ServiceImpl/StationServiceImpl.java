@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.example.betickettrain.util.Constants.Cache.CACHE_STATION;
+
 @Service
 @RequiredArgsConstructor
 public class StationServiceImpl implements StationService {
@@ -23,14 +25,13 @@ public class StationServiceImpl implements StationService {
     private final StationRepository stationRepository;
     private final StationMapper stationMapper;
     private final GenericCacheService cacheService;
-    
-    private static final String CACHE_NAME = "station";
+
     private static final String ALL_STATIONS_KEY = "all_stations";
 
     @Override
     public List<StationDto> getAllStations() {
         // Check cache first
-        List<StationDto> cachedStations = cacheService.get(CACHE_NAME, ALL_STATIONS_KEY);
+        List<StationDto> cachedStations = cacheService.get(CACHE_STATION, ALL_STATIONS_KEY);
         
         if (cachedStations != null) {
             return cachedStations;
@@ -41,7 +42,7 @@ public class StationServiceImpl implements StationService {
                 .collect(Collectors.toList());
         
         // Save to cache
-        cacheService.put(CACHE_NAME, ALL_STATIONS_KEY, stations);
+        cacheService.put(CACHE_STATION, ALL_STATIONS_KEY, stations);
         
         return stations;
     }
@@ -49,7 +50,7 @@ public class StationServiceImpl implements StationService {
     @Override
     public StationDto getStationById(Integer id) {
         // Check cache first
-        StationDto cachedStation = cacheService.get(CACHE_NAME, id);
+        StationDto cachedStation = cacheService.get(CACHE_STATION, id);
         
         if (cachedStation != null) {
             return cachedStation;
@@ -62,7 +63,7 @@ public class StationServiceImpl implements StationService {
         StationDto stationDto = stationMapper.toDto(station);
         
         // Save to cache
-        cacheService.put(CACHE_NAME, id, stationDto);
+        cacheService.put(CACHE_STATION, id, stationDto);
         
         return stationDto;
     }
@@ -72,7 +73,7 @@ public class StationServiceImpl implements StationService {
         String cacheKey = "status_" + status;
         
         // Check cache first
-        List<StationDto> cachedStations = cacheService.get(CACHE_NAME, cacheKey);
+        List<StationDto> cachedStations = cacheService.get(CACHE_STATION, cacheKey);
         
         if (cachedStations != null) {
             return cachedStations;
@@ -84,7 +85,7 @@ public class StationServiceImpl implements StationService {
                 .collect(Collectors.toList());
         
         // Save to cache
-        cacheService.put(CACHE_NAME, cacheKey, stations);
+        cacheService.put(CACHE_STATION, cacheKey, stations);
         
         return stations;
     }
@@ -98,7 +99,7 @@ public class StationServiceImpl implements StationService {
         String cacheKey = "search_" + keyword.toLowerCase();
         
         // Check cache first
-        List<StationDto> cachedResults = cacheService.get(CACHE_NAME, cacheKey);
+        List<StationDto> cachedResults = cacheService.get(CACHE_STATION, cacheKey);
         
         if (cachedResults != null) {
             return cachedResults;
@@ -117,7 +118,7 @@ public class StationServiceImpl implements StationService {
                 .collect(Collectors.toList());
         
         // Save to cache
-        cacheService.put(CACHE_NAME, cacheKey, results);
+        cacheService.put(CACHE_STATION, cacheKey, results);
         
         return results;
     }
@@ -141,9 +142,9 @@ public class StationServiceImpl implements StationService {
         StationDto result = stationMapper.toDto(savedStation);
         
         // Invalidate caches
-        cacheService.remove(CACHE_NAME, ALL_STATIONS_KEY);
+        cacheService.remove(CACHE_STATION, ALL_STATIONS_KEY);
         if (savedStation.getStatus() != null) {
-            cacheService.remove(CACHE_NAME, "status_" + savedStation.getStatus());
+            cacheService.remove(CACHE_STATION, "status_" + savedStation.getStatus());
         }
         
         return result;
@@ -171,15 +172,15 @@ public class StationServiceImpl implements StationService {
         StationDto result = stationMapper.toDto(updatedStation);
         
         // Invalidate caches
-        cacheService.remove(CACHE_NAME, id);
-        cacheService.remove(CACHE_NAME, ALL_STATIONS_KEY);
+        cacheService.remove(CACHE_STATION, id);
+        cacheService.remove(CACHE_STATION, ALL_STATIONS_KEY);
         
         // Invalidate status caches if status changed
         if (oldStatus != null) {
-            cacheService.remove(CACHE_NAME, "status_" + oldStatus);
+            cacheService.remove(CACHE_STATION, "status_" + oldStatus);
         }
         if (updatedStation.getStatus() != null) {
-            cacheService.remove(CACHE_NAME, "status_" + updatedStation.getStatus());
+            cacheService.remove(CACHE_STATION, "status_" + updatedStation.getStatus());
         }
         
         return result;
@@ -197,10 +198,10 @@ public class StationServiceImpl implements StationService {
         stationRepository.deleteById(id);
         
         // Invalidate caches
-        cacheService.remove(CACHE_NAME, id);
-        cacheService.remove(CACHE_NAME, ALL_STATIONS_KEY);
+        cacheService.remove(CACHE_STATION, id);
+        cacheService.remove(CACHE_STATION, ALL_STATIONS_KEY);
         if (status != null) {
-            cacheService.remove(CACHE_NAME, "status_" + status);
+            cacheService.remove(CACHE_STATION, "status_" + status);
         }
     }
 }

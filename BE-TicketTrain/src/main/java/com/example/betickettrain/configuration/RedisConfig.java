@@ -64,15 +64,11 @@ public class RedisConfig {
     // Cấu hình RedisCacheManager để quản lý cache
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory, GenericJackson2JsonRedisSerializer redisSerializer) {
-        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofMinutes(60)) // Thời gian sống của cache là 60 phút
+        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(60)) // Thời gian sống của cache là 60 phút
                 .disableCachingNullValues() // Không cache giá trị null
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer())) // Serializer cho key
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(redisSerializer)); // Serializer cho value
 
-        return RedisCacheManager.builder(connectionFactory)
-                .cacheDefaults(config)
-                .transactionAware()
-                .build();
+        return RedisCacheManager.builder(connectionFactory).cacheDefaults(config).transactionAware().build();
     }
 }

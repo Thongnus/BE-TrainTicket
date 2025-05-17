@@ -4,10 +4,10 @@ import com.example.betickettrain.dto.NewfeedDto;
 import com.example.betickettrain.dto.Response;
 import com.example.betickettrain.service.NewFeedService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 @RestController
 @RequestMapping("/api/newfeeds")
 public class NewFeedController {
@@ -21,7 +21,7 @@ public class NewFeedController {
 
     @GetMapping("/{id}")
     public Response<NewfeedDto> getNewfeedById(@PathVariable Long id) {
-        return new Response<>(newFeedService.getNewfeedById(id)) ;
+        return new Response<>(newFeedService.getNewfeedById(id));
     }
 
     @PostMapping("/create")

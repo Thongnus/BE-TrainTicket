@@ -1,6 +1,8 @@
 package com.example.betickettrain.service;
 
 import com.example.betickettrain.dto.TrainDTO;
+import org.springframework.stereotype.Service;
+
 import java.util.List;
 
 public interface TrainService {

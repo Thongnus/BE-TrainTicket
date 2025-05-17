@@ -27,14 +27,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
 
     @Override
-    protected void doFilterInternal(
-            @NonNull HttpServletRequest request,
-            @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         try {
             // Lấy JWT từ header
-             String jwt = parseJwt(request);
+            String jwt = parseJwt(request);
 
             // Nếu jwt không null và hợp lệ
             if (jwt != null && jwtService.validateJwtToken(jwt)) {
@@ -47,10 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     UserDetails userDetails = userServiceimp.loadUserByUsername(username);
 
                     // Tạo authentication token
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities());
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
                     // Thiết lập chi tiết authentication
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
