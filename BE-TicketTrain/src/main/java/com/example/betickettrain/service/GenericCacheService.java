@@ -1,6 +1,7 @@
 package com.example.betickettrain.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class GenericCacheService {
 
     private final RedisCacheService redisCacheService;
@@ -23,6 +25,33 @@ public class GenericCacheService {
         }
     }
 
+    public <K, V> V get(String cacheName, K key, Class<V> clazz) {
+        Map<Object, Object> cache = caches.computeIfAbsent(cacheName, k -> new ConcurrentHashMap<>());
+
+        // 1. Kiểm tra local cache
+        if (cache != null && cache.containsKey(key)) {
+            log.info("🔄 Lấy từ LOCAL cache [{}]: key = {}", cacheName, key);
+            return clazz.cast(cache.get(key));
+        }
+
+        // 2. Thử lấy từ Redis
+        String redisKey = buildRedisKey(cacheName, key);
+        V value = redisCacheService.getCachedData(redisKey, clazz);
+
+        if (value != null) {
+            if (cache != null) {
+                cache.put(key, value); // Ghi lại local
+            }
+            log.info("☁️  Lấy từ REDIS cache [{}]: key = {}", cacheName, key);
+            return value;
+        }
+
+        // 3. Không có trong cache
+        log.info("❌ Không có trong LOCAL & REDIS cache [{}]: key = {}", cacheName, key);
+        return null;
+    }
+
+
     public void createCache(String cacheName) {
         caches.putIfAbsent(cacheName, new ConcurrentHashMap<>());
     }
@@ -34,10 +63,10 @@ public class GenericCacheService {
         redisCacheService.cacheData(redisKey, value);
     }
 
-    @SuppressWarnings("unchecked")
     public <K, V> V get(String cacheName, K key) {
-        Map<Object, Object> cache = caches.get(cacheName);
+        Map<Object, Object> cache = caches.computeIfAbsent(cacheName, k -> new ConcurrentHashMap<>());
         if (cache != null && cache.containsKey(key)) {
+            log.info("🔄 Lấy từ LOCAL cache [{}]: key = {}", cacheName, key);
             return (V) cache.get(key);
         }
 
@@ -47,9 +76,11 @@ public class GenericCacheService {
             if (cache != null) {
                 cache.put(key, value);
             }
+            log.info("☁️  Lấy từ REDIS cache [{}]: key = {}", cacheName, key);
             return (V) value;
         }
 
+        log.info("❌ Không có trong cache [{}]: key = {}", cacheName, key);
         return null;
     }
 

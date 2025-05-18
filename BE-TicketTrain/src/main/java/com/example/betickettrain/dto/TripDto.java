@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 public class TripDto implements Serializable {
     Integer tripId;
     RouteDto route;
-    TrainDTO train;
+    TrainDto train;
     String tripCode;
     LocalDateTime departureTime;
     LocalDateTime arrivalTime;

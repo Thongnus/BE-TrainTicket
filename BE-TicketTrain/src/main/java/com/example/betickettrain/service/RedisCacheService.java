@@ -6,6 +6,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+
 @Service
 public class RedisCacheService {
 
@@ -14,29 +17,30 @@ public class RedisCacheService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    // Lưu đối tượng vào Redis
+    @Autowired
+    private ObjectMapper objectMapper;
+
     public void cacheData(String key, Object data) {
-        String cacheKey = KEY_PREFIX + key;
-        redisTemplate.opsForValue().set(cacheKey, data);
-        // Tùy chọn: cài đặt thời gian hết hạn
-        redisTemplate.expire(cacheKey, 1, TimeUnit.HOURS);
+        redisTemplate.opsForValue().set(KEY_PREFIX + key, data);
+        redisTemplate.expire(KEY_PREFIX + key, 1, TimeUnit.HOURS);
     }
 
-    // Lấy đối tượng từ Redis
     public Object getCachedData(String key) {
         return redisTemplate.opsForValue().get(KEY_PREFIX + key);
     }
 
-    // Xóa đối tượng khỏi Redis
+    // ✅ MỚI: Lấy dữ liệu và convert sang kiểu cụ thể
+    public <T> T getCachedData(String key, Class<T> clazz) {
+        Object value = getCachedData(key);
+        if (value == null) return null;
+        return objectMapper.convertValue(value, clazz);
+    }
+
     public void deleteCachedData(String key) {
         redisTemplate.delete(KEY_PREFIX + key);
     }
 
-    // Xóa nhiều keys bằng pattern
     public void deleteByPattern(String pattern) {
-        String cachePattern = KEY_PREFIX + pattern + "*";
-        redisTemplate.keys(cachePattern).forEach(key -> {
-            redisTemplate.delete(key);
-        });
+        redisTemplate.keys(KEY_PREFIX + pattern + "*").forEach(redisTemplate::delete);
     }
 }

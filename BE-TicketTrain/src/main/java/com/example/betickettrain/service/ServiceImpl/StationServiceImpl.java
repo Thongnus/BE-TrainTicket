@@ -1,13 +1,18 @@
 package com.example.betickettrain.service.ServiceImpl;
 
+import com.example.betickettrain.anotation.LogAction;
 import com.example.betickettrain.dto.StationDto;
 import com.example.betickettrain.entity.Station;
 
+import com.example.betickettrain.exceptions.ErrorCode;
 import com.example.betickettrain.mapper.StationMapper;
 import com.example.betickettrain.repository.StationRepository;
 import com.example.betickettrain.service.GenericCacheService;
 import com.example.betickettrain.service.StationService;
+import com.example.betickettrain.util.Constants;
+import io.netty.util.Constant;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +31,7 @@ public class StationServiceImpl implements StationService {
     private final StationMapper stationMapper;
     private final GenericCacheService cacheService;
 
-    private static final String ALL_STATIONS_KEY = "all_stations";
+    private static final String ALL_STATIONS_KEY = "all";
 
     @Override
     public List<StationDto> getAllStations() {
@@ -125,6 +130,7 @@ public class StationServiceImpl implements StationService {
 
     @Override
     @Transactional
+    @LogAction(action = Constants.Action.CREATE,entity = "Station", description = "Create a new station")
     public StationDto createStation(StationDto stationDto) {
         // Check if station with same name already exists
         if (stationRepository.existsByStationNameIgnoreCase(stationDto.getStationName())) {
@@ -152,9 +158,10 @@ public class StationServiceImpl implements StationService {
 
     @Override
     @Transactional
+    @LogAction(action = Constants.Action.UPDATE,entity = "Station", description = " Update a station")
     public StationDto updateStation(Integer id, StationDto stationDto) {
         Station station = stationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Station not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.TRAIN_NOT_FOUND.message + id));
         
         // Check if trying to update to an existing station name
         if (!station.getStationName().equalsIgnoreCase(stationDto.getStationName()) && 
@@ -188,9 +195,10 @@ public class StationServiceImpl implements StationService {
 
     @Override
     @Transactional
+    @LogAction(action = Constants.Action.DELETE,entity = "Station", description = "Delete a station")
     public void deleteStation(Integer id) {
         Station station = stationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Station not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.TRAIN_NOT_FOUND.message + id));
         
         // Store the status for cache invalidation
         Station.Status status = station.getStatus();

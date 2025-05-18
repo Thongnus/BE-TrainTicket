@@ -1,5 +1,6 @@
 package com.example.betickettrain.service.ServiceImpl;
 
+import com.example.betickettrain.anotation.LogAction;
 import com.example.betickettrain.dto.NewfeedDto;
 import com.example.betickettrain.entity.Newfeed;
 import com.example.betickettrain.mapper.NewfeedMapper;
@@ -42,6 +43,7 @@ public class NewFeedServiceImpl implements NewFeedService {
     }
 
     @Override
+    @LogAction(action = Constants.Action.CREATE,entity = "NewFeed", description = " Create a newfeed")
     public NewfeedDto createNewfeed(NewfeedDto newfeedDto) {
         Newfeed newfeed = newfeedMapper.toEntity(newfeedDto);
         newfeed = newfeedRepository.save(newfeed);
@@ -50,6 +52,7 @@ public class NewFeedServiceImpl implements NewFeedService {
     }
 
     @Override
+    @LogAction(action = Constants.Action.UPDATE,entity = "NewFeed", description = " Update a newfeed")
     public NewfeedDto updateNewfeed(Long id, NewfeedDto newfeedDto) {
         NewfeedDto updated = newfeedRepository.findById(id)
                 .map(existingNewfeed -> {
@@ -78,6 +81,7 @@ public class NewFeedServiceImpl implements NewFeedService {
     }
 
     @Override
+    @LogAction(action = Constants.Action.DELETE,entity = "NewFeed", description = " Delete a newfeed")
     public void deleteNewfeed(Long id) {
         newfeedRepository.deleteById(id);
         cacheService.remove(Constants.Cache.CACHE_NEWFEED, id);

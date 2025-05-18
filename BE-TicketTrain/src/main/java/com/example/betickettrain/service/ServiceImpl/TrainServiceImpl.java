@@ -1,6 +1,7 @@
 package com.example.betickettrain.service.ServiceImpl;
 
-import com.example.betickettrain.dto.TrainDTO;
+import com.example.betickettrain.anotation.LogAction;
+import com.example.betickettrain.dto.TrainDto;
 import com.example.betickettrain.entity.Train;
 import com.example.betickettrain.mapper.TrainMapper;
 import com.example.betickettrain.repository.TrainRepository;
@@ -24,7 +25,7 @@ public class TrainServiceImpl implements TrainService {
     private static final String ALL_TRAINS_KEY = "all";
 
     @Override
-    public TrainDTO createTrain(TrainDTO trainDTO) {
+    public TrainDto createTrain(TrainDto trainDTO) {
         Train train = trainMapper.toEntity(trainDTO);
         Train saved = trainRepository.save(train);
         cacheService.clearCache(Constants.Cache.CACHE_TRAIN);
@@ -32,8 +33,8 @@ public class TrainServiceImpl implements TrainService {
     }
 
     @Override
-    public TrainDTO updateTrain(Long id, TrainDTO trainDTO) {
-        TrainDTO updated = trainRepository.findById(id)
+    public TrainDto updateTrain(Long id, TrainDto trainDTO) {
+        TrainDto updated = trainRepository.findById(id)
                 .map(existing -> {
                     Train entity = trainMapper.partialUpdate(trainDTO, existing);
                     return trainMapper.toDto(trainRepository.save(entity));
@@ -45,11 +46,11 @@ public class TrainServiceImpl implements TrainService {
     }
 
     @Override
-    public TrainDTO getTrainById(Long id) {
-        TrainDTO cached = cacheService.get(Constants.Cache.CACHE_TRAIN, id);
+    public TrainDto getTrainById(Long id) {
+        TrainDto cached = (TrainDto)cacheService.get(Constants.Cache.CACHE_TRAIN, id,TrainDto.class);
         if (cached != null) return cached;
 
-        TrainDTO dto = trainRepository.findById(id)
+        TrainDto dto = trainRepository.findById(id)
                 .map(trainMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("Train not found with id: " + id));
 
@@ -58,12 +59,13 @@ public class TrainServiceImpl implements TrainService {
     }
 
     @Override
-    public List<TrainDTO> getAllTrains() {
-        List<TrainDTO> cached = cacheService.get(Constants.Cache.CACHE_TRAIN, ALL_TRAINS_KEY);
+
+    public List<TrainDto> getAllTrains() {
+        List<TrainDto> cached = cacheService.get(Constants.Cache.CACHE_TRAIN, ALL_TRAINS_KEY);
         if (cached != null) return cached;
 
         List<Train> trains = trainRepository.findAll();
-        List<TrainDTO> dtos = trains.stream()
+        List<TrainDto> dtos = trains.stream()
                 .map(trainMapper::toDto)
                 .toList();
 
@@ -72,6 +74,7 @@ public class TrainServiceImpl implements TrainService {
     }
 
     @Override
+    @LogAction(action = Constants.Action.DELETE,entity = "Train", description = "Delete a train")
     public void deleteTrain(Long id) {
         trainRepository.deleteById(id);
         cacheService.remove(Constants.Cache.CACHE_TRAIN, id);

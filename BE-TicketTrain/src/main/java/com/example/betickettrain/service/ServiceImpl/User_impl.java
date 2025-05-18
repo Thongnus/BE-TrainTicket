@@ -1,10 +1,12 @@
 package com.example.betickettrain.service.ServiceImpl;
 
+import com.example.betickettrain.anotation.LogAction;
 import com.example.betickettrain.entity.Role;
 import com.example.betickettrain.entity.User;
 import com.example.betickettrain.repository.RoleRepository;
 import com.example.betickettrain.repository.UserRepository;
 import com.example.betickettrain.service.UserService;
+import com.example.betickettrain.util.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -71,6 +73,7 @@ public class User_impl implements UserService {
     }
 
     @Override
+    @LogAction(action = Constants.Action.UPDATE,entity = "User", description = " Update a user")
     public User update(User user) {
 
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
@@ -93,6 +96,7 @@ public class User_impl implements UserService {
         return userRepository.findById(id);
     }
 
+    @LogAction(action = Constants.Action.DELETE,entity = "User", description = " Update a user")
     @Override
     public void deleteuserbyID(int id) {
         userRepository.deleteById(id);

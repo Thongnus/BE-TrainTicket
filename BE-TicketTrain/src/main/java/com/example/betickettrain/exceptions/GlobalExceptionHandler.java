@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
         return Response.error(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "INTERNAL_ERROR",
-                "Đã xảy ra lỗi, vui lòng thử lại sau"
+                ex.getMessage()
         );
     }
 }

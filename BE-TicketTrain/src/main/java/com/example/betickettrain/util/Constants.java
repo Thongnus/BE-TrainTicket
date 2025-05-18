@@ -2,6 +2,13 @@ package com.example.betickettrain.util;
 
 public final class Constants {
 
+    public static final class Action{
+        public static final String CREATE = "CREATE";
+        public static final String UPDATE = "UPDATE";
+        public static final String DELETE = "DELETE";
+
+
+    }
     public static final class Cache {
         public static final String CACHE_NEWFEED = "newFeed";
         public static final String CACHE_FEED = "feed";
@@ -18,6 +25,7 @@ public final class Constants {
         public static final String CACHE_BOOKING_SEAT = "bookingSeat";
         public static final String CACHE_BOOKING_PAYMENT = "bookingPayment";
         public static final String CACHE_TRAIN = "train";
+        public static final String CACHE_TRIP = "trip";
 
 
     }

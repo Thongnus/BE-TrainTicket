@@ -1,7 +1,7 @@
 package com.example.betickettrain.dto;
 
 import com.example.betickettrain.entity.Station;
-import lombok.Value;
+import lombok.*;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -9,7 +9,9 @@ import java.time.LocalDateTime;
 /**
  * DTO for {@link com.example.betickettrain.entity.Station}
  */
-@Value
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class StationDto implements Serializable {
     Integer stationId;
     String stationName;

@@ -1,14 +1,14 @@
 package com.example.betickettrain.service;
 
-import com.example.betickettrain.dto.TrainDTO;
+import com.example.betickettrain.dto.TrainDto;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 public interface TrainService {
-    TrainDTO createTrain(TrainDTO trainDTO);
-    TrainDTO updateTrain(Long id, TrainDTO trainDTO);
-    TrainDTO getTrainById(Long id);
-    List<TrainDTO> getAllTrains();
+    TrainDto createTrain(TrainDto trainDto);
+    TrainDto updateTrain(Long id, TrainDto trainDTO);
+    TrainDto getTrainById(Long id);
+    List<TrainDto> getAllTrains();
     void deleteTrain(Long id);
 }
