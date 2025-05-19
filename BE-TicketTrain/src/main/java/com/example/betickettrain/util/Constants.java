@@ -26,6 +26,7 @@ public final class Constants {
         public static final String CACHE_BOOKING_PAYMENT = "bookingPayment";
         public static final String CACHE_TRAIN = "train";
         public static final String CACHE_TRIP = "trip";
+        public static final String CACHE_ROUTES_STATION ="routes_station";
 
 
     }
