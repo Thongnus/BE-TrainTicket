@@ -179,7 +179,7 @@ CREATE TABLE bookings (
     booking_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     booking_code VARCHAR(20) NOT NULL UNIQUE,
-    booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   
     total_amount DECIMAL(10,2) NOT NULL,
     payment_status ENUM('pending', 'paid', 'refunded', 'cancelled') NOT NULL DEFAULT 'pending',
     booking_status ENUM('pending', 'confirmed', 'cancelled', 'completed') NOT NULL DEFAULT 'pending',
@@ -189,7 +189,6 @@ CREATE TABLE bookings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
     INDEX idx_booking_code (booking_code),
-    INDEX idx_booking_date (booking_date),
     INDEX idx_payment_status (payment_status),
     INDEX idx_booking_status (booking_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -472,50 +471,43 @@ CREATE PROCEDURE search_trips(
     IN p_passengers INT
 )
 BEGIN
-SELECT
-    t.trip_id,
-    t.trip_code,
-    t.departure_time,
-    t.arrival_time,
-    r.route_name,
-    tr.train_number,
-    tr.train_type,
-    os.station_name AS origin_station,
-    ds.station_name AS destination_station,
-    TIMEDIFF(t.arrival_time, t.departure_time) AS duration,
-    MIN(tp.base_price) AS min_price,
-    MAX(tp.base_price) AS max_price,
-    GROUP_CONCAT(
-            CONCAT(
-                    c.carriage_type, ': ',
-                    'wifi=', IF(ca.wifi, 'true', 'false'), ', ',
-                    'powerPlug=', IF(ca.power_plug, 'true', 'false'), ', ',
-                    'food=', IF(ca.food, 'true', 'false'), ', ',
-                    'tv=', IF(ca.tv, 'true', 'false'), ', ',
-                    'massageChair=', IF(ca.massage_chair, 'true', 'false')
-            ) SEPARATOR ' | '
-    ) AS amenities
-FROM trips t
-         JOIN routes r ON t.route_id = r.route_id
-         JOIN trains tr ON t.train_id = tr.train_id
-         JOIN route_stations rs_origin ON rs_origin.route_id = r.route_id AND rs_origin.station_id = p_origin_station_id
-         JOIN route_stations rs_dest ON rs_dest.route_id = r.route_id AND rs_dest.station_id = p_destination_station_id
-         JOIN stations os ON p_origin_station_id = os.station_id
-         JOIN stations ds ON p_destination_station_id = ds.station_id
-         JOIN ticket_prices tp ON tp.route_id = r.route_id AND tp.start_date <= p_departure_date AND tp.end_date >= p_departure_date
-         JOIN carriages c ON c.train_id = tr.train_id
-         LEFT JOIN carriage_amenities ca ON c.carriage_id = ca.carriage_id
-WHERE DATE(t.departure_time) = p_departure_date
-  AND rs_origin.stop_order < rs_dest.stop_order
-  AND t.status = 'scheduled'
-GROUP BY t.trip_id
-HAVING (
-    SELECT MIN(av.available_seats)
-    FROM available_seats_view av
-    WHERE av.trip_id = t.trip_id
-    ) >= p_passengers
-ORDER BY t.departure_time;
-END //
+    SELECT
+        t.trip_id,
+        t.trip_code,
+        t.departure_time,
+        t.arrival_time,
+        r.route_name,
+        tr.train_number,
+        tr.train_type,
+        os.station_name AS origin_station,
+        ds.station_name AS destination_station,
+        TIMEDIFF(t.arrival_time, t.departure_time) AS duration,
+        MIN(tp.base_price) AS min_price,
+        MAX(tp.base_price) AS max_price,
+        GROUP_CONCAT(DISTINCT c.carriage_type SEPARATOR ', ') AS carriage_types
+    FROM trips t
+             JOIN routes r ON t.route_id = r.route_id
+             JOIN trains tr ON t.train_id = tr.train_id
+             JOIN route_stations rs_origin ON rs_origin.route_id = r.route_id AND rs_origin.station_id = p_origin_station_id
+             JOIN route_stations rs_dest ON rs_dest.route_id = r.route_id AND rs_dest.station_id = p_destination_station_id
+             JOIN stations os ON os.station_id = p_origin_station_id
+             JOIN stations ds ON ds.station_id = p_destination_station_id
+             JOIN ticket_prices tp ON tp.route_id = r.route_id AND tp.start_date <= p_departure_date AND tp.end_date >= p_departure_date
+             JOIN carriages c ON c.train_id = tr.train_id
+    WHERE t.status = 'scheduled'
+      AND DATE(t.departure_time) = p_departure_date
+      AND rs_origin.stop_order < rs_dest.stop_order
+    GROUP BY
+        t.trip_id, t.trip_code, t.departure_time, t.arrival_time,
+        r.route_name, tr.train_number, tr.train_type,
+        os.station_name, ds.station_name
+    HAVING (
+               SELECT MIN(av.available_seats)
+               FROM available_seats_view av
+               WHERE av.trip_id = t.trip_id
+           ) >= p_passengers
+    ORDER BY t.departure_time;
+END;
 DELIMITER ;
 
 -- Tạo Stored Procedure tạo đặt vé

@@ -2,14 +2,13 @@ package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.anotation.LogAction;
 import com.example.betickettrain.dto.TripDto;
+import com.example.betickettrain.dto.TripSearchResult;
 import com.example.betickettrain.entity.Route;
 import com.example.betickettrain.entity.Train;
 import com.example.betickettrain.entity.Trip;
 import com.example.betickettrain.exceptions.ErrorCode;
 import com.example.betickettrain.mapper.TripMapper;
-import com.example.betickettrain.repository.RouteRepository;
-import com.example.betickettrain.repository.TrainRepository;
-import com.example.betickettrain.repository.TripRepository;
+import com.example.betickettrain.repository.*;
 import com.example.betickettrain.service.GenericCacheService;
 import com.example.betickettrain.service.TripService;
 import com.example.betickettrain.util.Constants;
@@ -17,16 +16,18 @@ import lombok.RequiredArgsConstructor;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class TripServiceImpl implements TripService {
+public class TripServiceImpl implements TripService  {
 
     private final TripRepository tripRepository;
     private final TrainRepository trainRepository;
     private final RouteRepository routeRepository;
-
+    private final CustomTripRepository customTripRepository;
     private final GenericCacheService cacheService;
     private final TripMapper tripMapper; // ✅ NEW: Mapper
 
@@ -133,4 +134,11 @@ public class TripServiceImpl implements TripService {
         cacheService.remove(Constants.Cache.CACHE_TRIP, id);
         cacheService.remove(Constants.Cache.CACHE_TRIP, ALL_TRIPS_KEY);
     }
+
+    @Override
+    public List<TripSearchResult> searchTrips(Integer originStationId, Integer destinationStationId, LocalDate departureDate, Integer passengers) {
+        return customTripRepository.searchTrips(originStationId, destinationStationId, departureDate, passengers);
+    }
+
+
 }

@@ -1,11 +1,16 @@
 package com.example.betickettrain.controller;
 
 import com.example.betickettrain.dto.TripDto;
+import com.example.betickettrain.dto.TripSearchResult;
 import com.example.betickettrain.entity.Trip;
 import com.example.betickettrain.service.TripService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/trips")
@@ -42,5 +47,14 @@ public class TripController {
     public ResponseEntity<?> deleteTrip(@PathVariable Integer id) {
         tripService.deleteTrip(id);
         return ResponseEntity.ok().build();
+    }
+    @GetMapping("/search")
+    public List<TripSearchResult> searchTrips(
+            @RequestParam("origin") Integer originStationId,
+            @RequestParam("destination") Integer destinationStationId,
+            @RequestParam("date") LocalDate departureDate,
+            @RequestParam("passengers") Integer passengers
+    ) {
+        return tripService.searchTrips(originStationId, destinationStationId, departureDate, passengers);
     }
 }

@@ -116,9 +116,9 @@ public class GenericCacheService {
     public void clearAllCaches() {
         caches.values().forEach(Map::clear);
 
-        for (String cacheName : caches.keySet()) {
-            redisCacheService.deleteByPattern(cacheName + ":");
-        }
+//        for (String cacheName : caches.keySet()) {
+//            redisCacheService.deleteByPattern(cacheName + ":");
+//        }
     }
 
     private <K> String buildRedisKey(String cacheName, K key) {

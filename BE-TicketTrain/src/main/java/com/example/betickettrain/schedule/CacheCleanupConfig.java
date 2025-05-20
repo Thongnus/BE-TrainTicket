@@ -14,7 +14,7 @@ public class CacheCleanupConfig {
     private final GenericCacheService cacheService;
     
     // Chạy task làm sạch cache mỗi 5 phút
-    @Scheduled(fixedRate = 3000000)
+    @Scheduled(fixedRate = 3600000)
     public void cleanupExpiredCacheEntries() {
         cacheService.clearAllCaches();
     }
