@@ -22,4 +22,5 @@ public class SeatDto implements Serializable {
     Seat.Status status;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
+    Double price;
 }

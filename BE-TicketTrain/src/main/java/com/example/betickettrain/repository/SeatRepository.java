@@ -5,7 +5,12 @@ import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.Collection;
 import java.util.List;
+
+@Repository
 public interface SeatRepository extends JpaRepository<Seat, Integer> {
 
     boolean existsBySeatNumber(String seatNumber);
@@ -25,4 +30,5 @@ public interface SeatRepository extends JpaRepository<Seat, Integer> {
                                                  @Param("status") Seat.Status status);
 
 
+    List<Seat> findByCarriageCarriageId(Integer carriageCarriageId);
 }
