@@ -1,6 +1,5 @@
-package com.example.betickettrain.logging;
+package com.example.betickettrain.anotation;
 
-import com.example.betickettrain.anotation.LogAction;
 import com.example.betickettrain.entity.SystemLog;
 import com.example.betickettrain.entity.User;
 import com.example.betickettrain.repository.SystemLogRepository;
@@ -47,7 +46,7 @@ public class SystemLogAspect {
                     .description(desString)
                     .ipAddress(request.getRemoteAddr())
                     .userAgent(request.getHeader("User-Agent"))
-                    .logTime(LocalDateTime.now())
+                 //   .logTime(LocalDateTime.now())
                     .build();
 
             systemLogRepository.save(logg);

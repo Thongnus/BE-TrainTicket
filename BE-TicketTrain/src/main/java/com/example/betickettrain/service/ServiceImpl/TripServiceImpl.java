@@ -13,12 +13,14 @@ import com.example.betickettrain.service.GenericCacheService;
 import com.example.betickettrain.service.TripService;
 import com.example.betickettrain.util.Constants;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -85,9 +87,9 @@ public class TripServiceImpl implements TripService  {
     @Override
     @Transactional(readOnly = true)
     public TripDto getTrip(Integer id) {
-        TripDto cached = cacheService.get(Constants.Cache.CACHE_TRIP, id, TripDto.class);
+        TripDto cached = cacheService.get(Constants.Cache.CACHE_TRIP, id);
         if (cached != null) return cached;
-
+        log.info(" ️️Lấy thông tin chuyến tàu từ DB");
         TripDto dto = tripRepository.findById(id)
                 .map(tripMapper::toDto)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chuyến tàu"+id));
@@ -101,7 +103,7 @@ public class TripServiceImpl implements TripService  {
     public List<TripDto> getAllTrips() {
         List<TripDto> cached = cacheService.get(Constants.Cache.CACHE_TRIP, ALL_TRIPS_KEY);
         if (cached != null) return cached;
-
+        log.info(" ️️Lấy thông tin chuyến tàu từ DB");
         List<TripDto> dtos = tripRepository.findAll().stream()
                 .map(tripMapper::toDto)
                 .toList();

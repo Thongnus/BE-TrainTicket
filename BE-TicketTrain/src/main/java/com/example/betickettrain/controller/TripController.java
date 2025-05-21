@@ -1,8 +1,8 @@
 package com.example.betickettrain.controller;
 
-import com.example.betickettrain.dto.TripDto;
-import com.example.betickettrain.dto.TripSearchResult;
+import com.example.betickettrain.dto.*;
 import com.example.betickettrain.entity.Trip;
+import com.example.betickettrain.service.SeatService;
 import com.example.betickettrain.service.TripService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -17,30 +17,30 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TripController {
     private final TripService tripService;
-
+    private final SeatService seatService;
     @PostMapping
-    public ResponseEntity<?> createTrip(@RequestBody TripDto dto) {
-        return ResponseEntity.ok(tripService.createTrip(dto));
+    public Response<?> createTrip(@RequestBody TripDto dto) {
+        return  new Response<>(tripService.createTrip(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateTrip(@PathVariable Integer id, @RequestBody TripDto dto) {
-        return ResponseEntity.ok(tripService.updateTrip(id, dto));
+    public Response<?> updateTrip(@PathVariable Integer id, @RequestBody TripDto dto) {
+        return new Response<>(tripService.updateTrip(id, dto));
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllTrips() {
-        return ResponseEntity.ok(tripService.getAllTrips());
+    public  Response<?> getAllTrips() {
+        return new Response<>(tripService.getAllTrips());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getTrip(@PathVariable Integer id) {
-        return ResponseEntity.ok(tripService.getTrip(id));
+    public  Response<?> getTrip(@PathVariable Integer id) {
+        return new Response<>(tripService.getTrip(id));
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<?> updateTripStatus(@PathVariable Integer id, @RequestParam Trip.Status status) {
-        return ResponseEntity.ok(tripService.updateTripStatus(id, status));
+    public  Response<?> updateTripStatus(@PathVariable Integer id, @RequestParam Trip.Status status) {
+        return new Response<>(tripService.updateTripStatus(id, status));
     }
 
     @DeleteMapping("/{id}")
@@ -49,12 +49,19 @@ public class TripController {
         return ResponseEntity.ok().build();
     }
     @GetMapping("/search")
-    public List<TripSearchResult> searchTrips(
+    public  Response<?> searchTrips(
             @RequestParam("origin") Integer originStationId,
             @RequestParam("destination") Integer destinationStationId,
             @RequestParam("date") LocalDate departureDate,
             @RequestParam("passengers") Integer passengers
     ) {
-        return tripService.searchTrips(originStationId, destinationStationId, departureDate, passengers);
+        return new Response<>(tripService.searchTrips(originStationId, destinationStationId, departureDate, passengers));
+    }
+
+
+
+    @GetMapping("/{tripId}/carriages-with-seats")
+    public Response<List<CarriageSeatDto>> getCarriagesWithSeats(@PathVariable Integer tripId) {
+        return new Response<>(seatService.getCarriagesWithSeats(tripId));
     }
 }

@@ -9,6 +9,7 @@ import com.example.betickettrain.service.GenericCacheService;
 import com.example.betickettrain.service.TrainService;
 import com.example.betickettrain.util.Constants;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TrainServiceImpl implements TrainService {
 
     private final TrainRepository trainRepository;
@@ -49,7 +51,7 @@ public class TrainServiceImpl implements TrainService {
     public TrainDto getTrainById(Long id) {
         TrainDto cached = (TrainDto)cacheService.get(Constants.Cache.CACHE_TRAIN, id,TrainDto.class);
         if (cached != null) return cached;
-
+        log.info(" ️️Lấy thông tin train từ DB với id"+id);
         TrainDto dto = trainRepository.findById(id)
                 .map(trainMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("Train not found with id: " + id));
@@ -63,7 +65,7 @@ public class TrainServiceImpl implements TrainService {
     public List<TrainDto> getAllTrains() {
         List<TrainDto> cached = cacheService.get(Constants.Cache.CACHE_TRAIN, ALL_TRAINS_KEY);
         if (cached != null) return cached;
-
+        log.info(" ️️Lấy thông tin train từ DB");
         List<Train> trains = trainRepository.findAll();
         List<TrainDto> dtos = trains.stream()
                 .map(trainMapper::toDto)

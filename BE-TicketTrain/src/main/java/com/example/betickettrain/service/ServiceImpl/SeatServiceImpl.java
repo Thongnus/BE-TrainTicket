@@ -1,5 +1,6 @@
 package com.example.betickettrain.service.ServiceImpl;
 
+import com.example.betickettrain.anotation.LogAction;
 import com.example.betickettrain.dto.CarriageSeatDto;
 import com.example.betickettrain.dto.NewfeedDto;
 import com.example.betickettrain.dto.SeatDto;
@@ -11,6 +12,7 @@ import com.example.betickettrain.service.GenericCacheService;
 import com.example.betickettrain.service.SeatService;
 import com.example.betickettrain.util.Constants;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
 import static com.example.betickettrain.util.Constants.Cache.*;
 import static com.example.betickettrain.util.Constants.Cache.CACHE_STATION;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SeatServiceImpl implements SeatService {
@@ -68,8 +71,9 @@ public class SeatServiceImpl implements SeatService {
                         seatDto.setSeatId(seat.getSeatId());
                         seatDto.setSeatNumber(seat.getSeatNumber());
                         seatDto.setSeatType(seat.getSeatType());
-                        seatDto.setStatus(Seat.Status.valueOf(bookedSeats.getOrDefault(seat.getSeatId(), "available")));
+                        seatDto.setStatus(seat.getStatus());
                         seatDto.setPrice(priceMap.getOrDefault(carriage.getCarriageType(), 0.0));
+                        seatDto.setBooked(bookedSeats.containsKey(seat.getSeatId()));
                         return seatDto;
                     }).toList();
 
@@ -78,6 +82,7 @@ public class SeatServiceImpl implements SeatService {
         }).toList();
     }
 
+    @LogAction(action = Constants.Action.CREATE,entity = "Seat", description = " Create a Seat")
     @Override
     public SeatDto createSeat(SeatDto seatDto) {
         Seat entity = seatMapper.toEntity(seatDto);
@@ -86,6 +91,7 @@ public class SeatServiceImpl implements SeatService {
         return seatMapper.toDto(saved);
     }
 
+    @LogAction(action = Constants.Action.UPDATE,entity = "Seat", description = " Update a Seat")
     @Override
     public SeatDto updateSeat(Integer id, SeatDto seatDto) {
         return null;
@@ -95,7 +101,7 @@ public class SeatServiceImpl implements SeatService {
     public SeatDto getSeat(Integer id) {
         SeatDto cached = cacheService.get(CACHE_SEAT, id);
         if (cached != null) return cached;
-
+        log.debug(" ️️Lấy thông tin ghế từ DB với id"+id);
         SeatDto dto = seatRepository.findById(id)
                 .map(seatMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("SeatDto not found with id: " + id));
@@ -112,6 +118,7 @@ public class SeatServiceImpl implements SeatService {
         if (cachedStations != null) {
             return cachedStations;
         }
+        log.debug(" ️️Lấy thông tin ghế từ DB");
         // Cache miss - fetch from database
         List<SeatDto> seatDtos = seatRepository.findAll().stream()
                 .map(seatMapper::toDto)
@@ -123,7 +130,7 @@ public class SeatServiceImpl implements SeatService {
         return seatDtos;
 
     }
-
+    @LogAction(action = Constants.Action.DELETE,entity = "Seat", description = " Delete a Seat")
     @Override
     public void deleteSeat(Integer id) {
          seatRepository.deleteById(id);

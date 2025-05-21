@@ -39,9 +39,7 @@ public class GenericCacheService {
         V value = redisCacheService.getCachedData(redisKey, clazz);
 
         if (value != null) {
-            if (cache != null) {
-                cache.put(key, value); // Ghi lại local
-            }
+            cache.put(key, value); // Ghi lại local
             log.info("☁️  Lấy từ REDIS cache [{}]: key = {}", cacheName, key);
             return value;
         }

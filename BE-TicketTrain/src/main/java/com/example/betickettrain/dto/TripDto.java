@@ -1,6 +1,9 @@
 package com.example.betickettrain.dto;
 
 import com.example.betickettrain.entity.Trip;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.Value;
 
 import java.io.Serializable;
@@ -9,7 +12,9 @@ import java.time.LocalDateTime;
 /**
  * DTO for {@link com.example.betickettrain.entity.Trip}
  */
-@Value
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class TripDto implements Serializable {
     Integer tripId;
     RouteDto route;

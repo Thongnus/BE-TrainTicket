@@ -23,4 +23,5 @@ public class SeatDto implements Serializable {
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
     Double price;
+    boolean booked; // true if already booked
 }
