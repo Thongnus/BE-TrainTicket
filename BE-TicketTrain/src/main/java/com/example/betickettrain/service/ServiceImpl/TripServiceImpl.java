@@ -3,9 +3,7 @@ package com.example.betickettrain.service.ServiceImpl;
 import com.example.betickettrain.anotation.LogAction;
 import com.example.betickettrain.dto.TripDto;
 import com.example.betickettrain.dto.TripSearchResult;
-import com.example.betickettrain.entity.Route;
-import com.example.betickettrain.entity.Train;
-import com.example.betickettrain.entity.Trip;
+import com.example.betickettrain.entity.*;
 import com.example.betickettrain.exceptions.ErrorCode;
 import com.example.betickettrain.mapper.TripMapper;
 import com.example.betickettrain.repository.*;
@@ -19,7 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -32,11 +33,13 @@ public class TripServiceImpl implements TripService  {
     private final CustomTripRepository customTripRepository;
     private final GenericCacheService cacheService;
     private final TripMapper tripMapper; // ✅ NEW: Mapper
-
+    private final TripScheduleRepository tripScheduleRepository;
+    private final RouteStationRepository routeStationRepository;
     private static final String ALL_TRIPS_KEY = "all";
 
     @Override
     @LogAction(action = Constants.Action.CREATE,entity = "Trip", description = " Create a trip")
+    @Transactional
     public TripDto createTrip(TripDto dto) {
         Train train = trainRepository.findById(dto.getTrain().getTrainId().longValue())
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.TRAIN_NOT_FOUND.message));
@@ -54,6 +57,7 @@ public class TripServiceImpl implements TripService  {
         trip.setDelayMinutes(dto.getDelayMinutes() == null ? 0 : dto.getDelayMinutes());
 
         Trip saved = tripRepository.save(trip);
+        generateTripSchedulesFromRoute(saved);
         cacheService.clearCache(Constants.Cache.CACHE_TRIP);
         return tripMapper.toDto(saved);
     }
@@ -141,6 +145,23 @@ public class TripServiceImpl implements TripService  {
     public List<TripSearchResult> searchTrips(Integer originStationId, Integer destinationStationId, LocalDate departureDate, Integer passengers) {
         return customTripRepository.searchTrips(originStationId, destinationStationId, departureDate, passengers);
     }
+    private void generateTripSchedulesFromRoute(Trip trip) {
+        List<RouteStation> stops = routeStationRepository.findByRouteRouteIdOrderByStopOrderAsc(
+                trip.getRoute().getRouteId()
+        );
 
+        List<TripSchedule> schedules = stops.stream()
+                .map(stop -> TripSchedule.builder()
+                        .trip(trip)
+                        .station(stop.getStation())
+                        .scheduledArrival(trip.getDepartureTime().plusMinutes(stop.getArrivalOffset()))
+                        .scheduledDeparture(trip.getDepartureTime().plusMinutes(stop.getDepartureOffset()))
+                        .status(TripSchedule.Status.scheduled)
+                        .build())
+                .collect(Collectors.toList());
+
+
+        tripScheduleRepository.saveAll(schedules);
+    }
 
 }

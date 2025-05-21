@@ -1,15 +1,20 @@
 package com.example.betickettrain.controller;
 
-import com.example.betickettrain.dto.*;
+import com.example.betickettrain.dto.CarriageSeatDto;
+import com.example.betickettrain.dto.Response;
+import com.example.betickettrain.dto.TripDto;
+import com.example.betickettrain.dto.TripTrackingDto;
 import com.example.betickettrain.entity.Trip;
 import com.example.betickettrain.service.SeatService;
 import com.example.betickettrain.service.TripService;
+import com.example.betickettrain.service.TripTrackingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -18,9 +23,11 @@ import java.util.List;
 public class TripController {
     private final TripService tripService;
     private final SeatService seatService;
+    private final TripTrackingService tripTrackingService;
+
     @PostMapping
     public Response<?> createTrip(@RequestBody TripDto dto) {
-        return  new Response<>(tripService.createTrip(dto));
+        return new Response<>(tripService.createTrip(dto));
     }
 
     @PutMapping("/{id}")
@@ -29,17 +36,17 @@ public class TripController {
     }
 
     @GetMapping
-    public  Response<?> getAllTrips() {
+    public Response<?> getAllTrips() {
         return new Response<>(tripService.getAllTrips());
     }
 
     @GetMapping("/{id}")
-    public  Response<?> getTrip(@PathVariable Integer id) {
+    public Response<?> getTrip(@PathVariable Integer id) {
         return new Response<>(tripService.getTrip(id));
     }
 
-    @PatchMapping("/{id}/status")
-    public  Response<?> updateTripStatus(@PathVariable Integer id, @RequestParam Trip.Status status) {
+    @PutMapping("/{id}/status")
+    public Response<?> updateTripStatus(@PathVariable Integer id, @RequestParam Trip.Status status) {
         return new Response<>(tripService.updateTripStatus(id, status));
     }
 
@@ -48,8 +55,9 @@ public class TripController {
         tripService.deleteTrip(id);
         return ResponseEntity.ok().build();
     }
+
     @GetMapping("/search")
-    public  Response<?> searchTrips(
+    public Response<?> searchTrips(
             @RequestParam("origin") Integer originStationId,
             @RequestParam("destination") Integer destinationStationId,
             @RequestParam("date") LocalDate departureDate,
@@ -59,9 +67,32 @@ public class TripController {
     }
 
 
-
     @GetMapping("/{tripId}/carriages-with-seats")
     public Response<List<CarriageSeatDto>> getCarriagesWithSeats(@PathVariable Integer tripId) {
         return new Response<>(seatService.getCarriagesWithSeats(tripId));
+    }
+
+
+    @GetMapping("/{tripId}/tracking")
+    public TripTrackingDto getTracking(@PathVariable Integer tripId) {
+        return tripTrackingService.getTripTracking(tripId);
+    }
+
+    @PostMapping("/{tripId}/stations/{stationId}/arrived")
+    public void markStationArrived(
+            @PathVariable Integer tripId,
+            @PathVariable Integer stationId,
+            @RequestParam("actualArrival") LocalDateTime actualArrival
+    ) {
+        tripTrackingService.markStationArrived(tripId, stationId, actualArrival);
+    }
+
+    @PostMapping("/{tripId}/stations/{stationId}/departed")
+    public void markStationDeparted(
+            @PathVariable Integer tripId,
+            @PathVariable Integer stationId,
+            @RequestParam("actualDeparture") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime actualDeparture
+    ) {
+        tripTrackingService.markStationDeparted(tripId, stationId, actualDeparture);
     }
 }
