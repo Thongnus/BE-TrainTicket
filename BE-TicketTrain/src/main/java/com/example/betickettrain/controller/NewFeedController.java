@@ -15,27 +15,27 @@ public class NewFeedController {
     private NewFeedService newFeedService;
 
     @GetMapping
-    public Response<List<NewfeedDto>> getAllNewfeeds() {
+    public Response<List<NewfeedDto>> getAllNewFeeds() {
         return new Response<>(newFeedService.getAllNewfeeds());
     }
 
     @GetMapping("/{id}")
-    public Response<NewfeedDto> getNewfeedById(@PathVariable Long id) {
+    public Response<NewfeedDto> getNewFeedById(@PathVariable Long id) {
         return new Response<>(newFeedService.getNewfeedById(id));
     }
 
     @PostMapping("/create")
-    public Response<NewfeedDto> createNewfeed(@RequestBody NewfeedDto newfeedDto) {
+    public Response<NewfeedDto> createNewFeed(@RequestBody NewfeedDto newfeedDto) {
         return new Response<>(newFeedService.createNewfeed(newfeedDto));
     }
 
     @PutMapping("/{id}")
-    public Response<NewfeedDto> updateNewfeed(@PathVariable Long id, @RequestBody NewfeedDto newfeedDto) {
+    public Response<NewfeedDto> updateNewFeed(@PathVariable Long id, @RequestBody NewfeedDto newfeedDto) {
         return new Response<>(newFeedService.updateNewfeed(id, newfeedDto));
     }
 
     @DeleteMapping("/{id}")
-    public Response<Void> deleteNewfeed(@PathVariable Long id) {
+    public Response<Void> deleteNewFeed(@PathVariable Long id) {
         newFeedService.deleteNewfeed(id);
         return Response.of(null, "Xóa bài đăng thành công");
     }

@@ -56,11 +56,14 @@ public class Ticket {
     private String ticketCode;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "ticket_status", nullable = false, columnDefinition = "ENUM('booked', 'checked_in', 'cancelled', 'used', 'expired') DEFAULT 'booked'")
+    @Column(name = "ticket_status", nullable = false, columnDefinition = "ENUM('hold','booked', 'checked_in', 'cancelled', 'used', 'expired') DEFAULT 'booked'")
     private Status status;
 
     @Column(name = "boarding_time")
     private LocalDateTime boardingTime;
+
+    @Column(name = "hold_expire_time")
+    private LocalDateTime holdExpireTime;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -71,6 +74,6 @@ public class Ticket {
     private LocalDateTime updatedAt;
 
     public enum Status {
-        booked, checked_in, cancelled, used, expired
+        hold, booked, checked_in, cancelled, used, expired
     }
 }

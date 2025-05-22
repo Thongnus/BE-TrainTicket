@@ -1,0 +1,13 @@
+1. Nhập thông tin ghế + hành khách
+       ↓
+2. Gửi API tạo "booking tạm thời" (status = pending)
+       ↓
+3. Backend trả lại: redirect URL sang VNPAY
+       ↓
+4. Frontend chuyển hướng user tới trang VNPAY
+       ↓
+5. VNPAY xử lý, rồi gọi về API callback ở backend (notify)
+       ↓
+6. Backend xử lý kết quả thanh toán
+       ↓
+7. Giao diện hiện kết quả (✔ thành công | ✖ thất bại)

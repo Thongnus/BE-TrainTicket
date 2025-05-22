@@ -2,9 +2,7 @@ package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.anotation.LogAction;
 import com.example.betickettrain.dto.CarriageSeatDto;
-import com.example.betickettrain.dto.NewfeedDto;
 import com.example.betickettrain.dto.SeatDto;
-import com.example.betickettrain.dto.StationDto;
 import com.example.betickettrain.entity.*;
 import com.example.betickettrain.mapper.SeatMapper;
 import com.example.betickettrain.repository.*;
@@ -15,11 +13,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.example.betickettrain.util.Constants.Cache.*;
+import static com.example.betickettrain.util.Constants.Cache.CACHE_SEAT;
 import static com.example.betickettrain.util.Constants.Cache.CACHE_STATION;
 
 @Slf4j
@@ -33,7 +33,7 @@ public class SeatServiceImpl implements SeatService {
     private final TicketRepository ticketRepository;
     private final TicketPriceRepository ticketPriceRepository;
     private final GenericCacheService cacheService;
-
+    private final RedisSeatLockServiceImpl redisSeatLockService;
     private static final String ALL_SEAT_KEY = "all";
 
     @Override
@@ -43,19 +43,25 @@ public class SeatServiceImpl implements SeatService {
 
         Integer trainId = trip.getTrain().getTrainId();
         Integer routeId = trip.getRoute().getRouteId();
+        LocalDateTime now = LocalDateTime.now();
 
-        // Map<SeatId, TicketStatus>
-        Map<Integer, String> bookedSeats = ticketRepository.findAllByTrip_TripId(tripId).stream()
+        Set<Integer> redisLockedSeats = redisSeatLockService.getLockedSeats(tripId);
+
+        Map<Integer, Ticket.Status> seatStatuses = ticketRepository.findAllByTrip_TripId(tripId).stream()
+                .filter(t ->
+                        t.getStatus() == Ticket.Status.booked ||
+                                (t.getStatus() == Ticket.Status.hold && t.getHoldExpireTime().isAfter(now))
+                )
                 .collect(Collectors.toMap(
-                        ticket -> ticket.getSeat().getSeatId(),
-                        ticket -> ticket.getStatus().name()
+                        t -> t.getSeat().getSeatId(),
+                        Ticket::getStatus,
+                        (a, b) -> a // nếu trùng seat, giữ 1 giá trị là đủ
                 ));
-        // Map<CarriageType, Price>
+
         Map<Carriage.CarriageType, Double> priceMap = ticketPriceRepository.findByRouteRouteId(routeId).stream()
                 .collect(Collectors.toMap(
                         TicketPrice::getCarriageType,
-                        ticketPrice -> ticketPrice.getHolidaySurcharge() == null ?
-                            ticketPrice.getBasePrice() : ticketPrice.getBasePrice() + ticketPrice.getHolidaySurcharge()
+                        tp -> tp.getHolidaySurcharge() == null ? tp.getBasePrice() : tp.getBasePrice() + tp.getHolidaySurcharge()
                 ));
 
         return carriageRepository.findAllByTrain_TrainId(trainId).stream().map(carriage -> {
@@ -65,17 +71,21 @@ public class SeatServiceImpl implements SeatService {
             dto.setCarriageType(String.valueOf(carriage.getCarriageType()));
             dto.setCapacity(carriage.getCapacity());
 
-            List<SeatDto> seatDtos = seatRepository.findByCarriageCarriageId(carriage.getCarriageId())
-                    .stream().map(seat -> {
-                        SeatDto seatDto = new SeatDto();
-                        seatDto.setSeatId(seat.getSeatId());
-                        seatDto.setSeatNumber(seat.getSeatNumber());
-                        seatDto.setSeatType(seat.getSeatType());
-                        seatDto.setStatus(seat.getStatus());
-                        seatDto.setPrice(priceMap.getOrDefault(carriage.getCarriageType(), 0.0));
-                        seatDto.setBooked(bookedSeats.containsKey(seat.getSeatId()));
-                        return seatDto;
-                    }).toList();
+            List<SeatDto> seatDtos = seatRepository.findByCarriageCarriageId(carriage.getCarriageId()).stream().map(seat -> {
+                SeatDto seatDto = new SeatDto();
+                seatDto.setSeatId(seat.getSeatId());
+                seatDto.setSeatNumber(seat.getSeatNumber());
+                seatDto.setSeatType(seat.getSeatType());
+                seatDto.setStatus(seat.getStatus());
+                seatDto.setPrice(priceMap.getOrDefault(carriage.getCarriageType(), 0.0));
+
+                boolean isRedisLocked = redisLockedSeats.contains(seat.getSeatId());
+                boolean isBooked = seatStatuses.getOrDefault(seat.getSeatId(), null) == Ticket.Status.booked;
+                boolean isHeld = seatStatuses.getOrDefault(seat.getSeatId(), null) == Ticket.Status.hold;
+
+                seatDto.setBooked(isRedisLocked || isBooked || isHeld);
+                return seatDto;
+            }).toList();
 
             dto.setSeats(seatDtos);
             return dto;
