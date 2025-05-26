@@ -30,7 +30,6 @@ public class RedisSeatLockServiceImpl implements RedisSeatLockService {
     @Override
     public Set<Integer> getLockedSeats(Integer tripId) {
         Set<String> keys = redisTemplate.keys("lock:trip:" + tripId + ":seat:*");
-        if (keys == null) return Set.of();
         return keys.stream()
                 .map(k -> k.substring(k.lastIndexOf(":") + 1))
                 .map(Integer::valueOf)
@@ -40,5 +39,10 @@ public class RedisSeatLockServiceImpl implements RedisSeatLockService {
     @Override
     public void unlockSeat(Integer tripId, Integer seatId) {
         redisTemplate.delete(buildKey(tripId, seatId));
+    }
+
+    @Override
+    public void extendSeatLock(Integer tripId, Integer seatId, Duration ttl) {
+        redisTemplate.expire(buildKey(tripId, seatId), ttl);
     }
 }

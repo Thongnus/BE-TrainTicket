@@ -54,7 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/test/all").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
                                 "/swagger-resources/**", "/webjars/**", "/swagger-ui/index.html",
-                                "/v3/api-docs.yaml", "/configuration/**").permitAll()
+                                "/v3/api-docs.yaml", "/configuration/**",   "/api/payment/vnpay/callback").permitAll()
                         .requestMatchers("/api/test/user").hasRole("USER")
                         .requestMatchers("/api/test/admin").hasRole("ADMIN")
                         .anyRequest().authenticated()

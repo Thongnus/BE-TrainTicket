@@ -9,12 +9,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 
 @SpringBootApplication
 public class BeTicketTrainApplication {
-   @Autowired
-    RedisCacheService redisCacheService;
-   @PostConstruct
-   void updateCache() {
-       redisCacheService.getCachedData("redisCache:train:all");
-   }
+//   @Autowired
+//    RedisCacheService redisCacheService;
+//   @PostConstruct
+//   void updateCache() {
+//       redisCacheService.getCachedData("redisCache:train:all");
+//   }
     public static void main(String[] args) {
         SpringApplication.run(BeTicketTrainApplication.class, args);
     }

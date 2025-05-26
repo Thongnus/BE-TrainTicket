@@ -48,7 +48,7 @@ public class Booking {
     private BookingStatus bookingStatus;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "payment_method", nullable = false, columnDefinition = "ENUM('credit_card', 'bank_transfer', 'e_wallet', 'cash')")
+    @Column(name = "payment_method", nullable = false, columnDefinition = "ENUM('vnPay','credit_card', 'bank_transfer', 'e_wallet', 'cash')")
     private PaymentMethod paymentMethod;
 
     @Column(name = "payment_date")
@@ -71,6 +71,6 @@ public class Booking {
     }
 
     public enum PaymentMethod {
-        credit_card, bank_transfer, e_wallet, cash
+        vnPay,credit_card, bank_transfer, e_wallet, cash
     }
 }
