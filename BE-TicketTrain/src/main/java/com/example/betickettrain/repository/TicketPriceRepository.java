@@ -7,19 +7,19 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 public interface TicketPriceRepository extends JpaRepository<TicketPrice, Integer> {
     List<TicketPrice> findByRouteRouteId(Integer routeRouteId);
+
     @Query("SELECT tp FROM TicketPrice tp WHERE tp.route.routeId = :routeId " +
-            "AND tp.carriageType = :carriageType " +
+            "AND tp.carriageType In  :carriageType " +
             "AND :departureDate BETWEEN tp.startDate AND tp.endDate")
-    Optional<TicketPrice> findByRouteAndCarriageTypeAndDateRange(
+    List<TicketPrice> findByRouteAndCarriageTypeAndDateRange(
             @Param("routeId") Integer routeId,
-            @Param("carriageType") Carriage.CarriageType carriageType,
+            @Param("carriageType") List<Carriage.CarriageType> carriageType,
             @Param("departureDate") LocalDate departureDate
     );
+
+
 }

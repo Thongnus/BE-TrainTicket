@@ -30,5 +30,18 @@ public interface SeatRepository extends JpaRepository<Seat, Integer> {
                                                  @Param("status") Seat.Status status);
 
 
+    @Query("SELECT s FROM Seat s " +
+            "JOIN FETCH s.carriage c " +
+            "WHERE s.seatId IN :seatIds")
+    List<Seat> findAllByIdWithCarriage(@Param("seatIds") List<Integer> seatIds);
+
+    @Query("SELECT s FROM Seat s " +
+            "JOIN FETCH s.carriage c " +
+            "JOIN FETCH c.train t " +
+            "WHERE s.seatId IN :seatIds")
+    List<Seat> findAllByIdWithCarriageAndTrain(@Param("seatIds") List<Integer> seatIds);
+
     List<Seat> findByCarriageCarriageId(Integer carriageCarriageId);
+
+     List<Seat>  findBySeatIdIn(List<Integer> id);
 }

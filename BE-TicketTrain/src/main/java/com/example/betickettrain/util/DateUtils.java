@@ -11,6 +11,8 @@ public class DateUtils {
     public static final DateTimeFormatter DD_MM_YYYY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     public static final DateTimeFormatter DD_MM_YYYY_HH_MM = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     public static final DateTimeFormatter ISO_DATE_TIME = DateTimeFormatter.ISO_DATE_TIME;
+    public static final DateTimeFormatter YYYYMMDDHHMMSS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+
 
     // Region: Converters
     /**
@@ -85,11 +87,33 @@ public class DateUtils {
     }
 
     // Region: Formatting
+
     /**
      * Định dạng LocalDate thành chuỗi
      */
     public static String format(LocalDate date) {
         return date.format(DD_MM_YYYY);
+    }
+
+    /**
+     * Chuyển Date sang chuỗi với định dạng yyyyMMddHHmmss
+     */
+    public static String toString(Date date) {
+        return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime().format(YYYYMMDDHHMMSS);
+    }
+
+    /**
+     * Chuyển LocalDateTime sang chuỗi với định dạng yyyyMMddHHmmss
+     */
+    public static String toString(LocalDateTime localDateTime) {
+        return localDateTime.format(YYYYMMDDHHMMSS);
+    }
+
+    /**
+     * Chuyển LocalDate sang chuỗi với định dạng yyyyMMddHHmmss
+     */
+    public static String toString(LocalDate localDate) {
+        return localDate.atStartOfDay().format(YYYYMMDDHHMMSS);
     }
 
     /**

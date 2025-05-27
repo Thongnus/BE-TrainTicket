@@ -16,4 +16,6 @@ public interface SeatService {
         List<SeatDto> getAllSeats();
 
         void deleteSeat(Integer id);
+
+        void unLockSeat(Integer tripId, List<Integer> idSeat);
 }

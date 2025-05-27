@@ -2,6 +2,7 @@ package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.service.RedisSeatLockService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +12,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RedisSeatLockServiceImpl implements RedisSeatLockService {
 
     private final RedisTemplate<String, String> redisTemplate;
@@ -38,7 +40,9 @@ public class RedisSeatLockServiceImpl implements RedisSeatLockService {
 
     @Override
     public void unlockSeat(Integer tripId, Integer seatId) {
-        redisTemplate.delete(buildKey(tripId, seatId));
+        String key = buildKey(tripId,seatId);
+        log.debug("Delete|Unlock Key :{}", key);
+        redisTemplate.delete(key);
     }
 
     @Override

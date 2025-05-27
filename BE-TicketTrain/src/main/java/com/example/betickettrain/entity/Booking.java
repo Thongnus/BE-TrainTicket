@@ -29,7 +29,7 @@ public class Booking {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "booking_code", nullable = false, unique = true, length = 20)
+    @Column(name = "booking_code", nullable = false, unique = true, length = 100)
     private String bookingCode;
 
     @CreationTimestamp

@@ -4,6 +4,7 @@ import com.example.betickettrain.configuration.VnPayProperties;
 import com.example.betickettrain.entity.Booking;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.net.URLEncoder;
@@ -13,13 +14,14 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class VnpayService {
     private final VnPayProperties vnpayProps;
 
     public String generatePaymentUrl(Booking booking) {
         String vnp_TxnRef = booking.getBookingCode();
         String vnp_OrderInfo = "Thanh toan ve tau " + booking.getBookingCode();
-        String vnp_Amount = String.valueOf((long)(booking.getTotalAmount() * 100));
+        String vnp_Amount = String.valueOf((long) (booking.getTotalAmount() * 100));
 
         Map<String, String> vnp_Params = new HashMap<>();
         vnp_Params.put("vnp_Version", "2.1.0");
@@ -51,14 +53,19 @@ public class VnpayService {
 
         StringBuilder hashData = new StringBuilder();
         for (String key : sortedKeys) {
-            hashData.append(key).append('=').append(fields.get(key));
-            if (!key.equals(sortedKeys.get(sortedKeys.size() - 1))) {
-                hashData.append('&');
+            String value = fields.get(key);
+            if (value != null && !value.isEmpty()) {
+                // Mã hóa giá trị tham số giống buildSecureUrl
+                hashData.append(key).append('=').append(URLEncoder.encode(value, StandardCharsets.UTF_8));
+                if (!key.equals(sortedKeys.get(sortedKeys.size() - 1))) {
+                    hashData.append('&');
+                }
             }
         }
 
         String secureHash = hmacSHA512(vnpayProps.getHashSecret(), hashData.toString());
         String receivedHash = request.getParameter("vnp_SecureHash");
+        log.debug("Calculated hash: {}, Received hash: {}", secureHash, receivedHash);
         return secureHash.equalsIgnoreCase(receivedHash);
     }
 
@@ -86,15 +93,17 @@ public class VnpayService {
     private String hmacSHA512(String key, String data) {
         try {
             javax.crypto.Mac hmac512 = javax.crypto.Mac.getInstance("HmacSHA512");
-            javax.crypto.spec.SecretKeySpec secretKeySpec = new javax.crypto.spec.SecretKeySpec(key.getBytes(), "HmacSHA512");
+            javax.crypto.spec.SecretKeySpec secretKeySpec = new javax.crypto.spec.SecretKeySpec(
+                    key.getBytes(StandardCharsets.UTF_8), "HmacSHA512");
             hmac512.init(secretKeySpec);
-            byte[] bytes = hmac512.doFinal(data.getBytes());
+            byte[] bytes = hmac512.doFinal(data.getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();
             for (byte b : bytes) {
                 sb.append(String.format("%02x", b));
             }
             return sb.toString();
         } catch (Exception e) {
+            log.error("Failed to calculate HMAC SHA512 for data: {}", data, e);
             throw new RuntimeException("Failed to calculate HMAC SHA512", e);
         }
     }

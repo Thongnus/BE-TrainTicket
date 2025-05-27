@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import static com.example.betickettrain.util.Constants.Cache.CACHE_SEAT;
@@ -146,5 +147,9 @@ public class SeatServiceImpl implements SeatService {
          seatRepository.deleteById(id);
         cacheService.remove(CACHE_SEAT, id);
         cacheService.remove(CACHE_SEAT, ALL_SEAT_KEY); // cập nhật lại danh sách sau khi xóa
+    }
+    @Override
+    public void unLockSeat(Integer tripId, List<Integer> idSeat){
+        idSeat.forEach(seatId ->redisSeatLockService.unlockSeat(tripId,seatId) );
     }
 }

@@ -8,6 +8,8 @@ import com.example.betickettrain.repository.*;
 import com.example.betickettrain.service.BookingService;
 import com.example.betickettrain.service.EmailService;
 import com.example.betickettrain.service.RedisSeatLockService;
+import com.example.betickettrain.util.DateUtils;
+import jakarta.mail.MessagingException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,10 +21,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,6 +38,7 @@ public class BookingServiceImpl implements BookingService {
     private final PromotionRepository promotionRepository;
     private final BookingPromotionRepository bookingPromotionRepository;
     private final EmailService emailService;
+
     // chưa hoàn thiện vẫn chưa fix dc race condition
     @Override
     public void lockSeats(BookingLockRequest request) {
@@ -99,31 +99,44 @@ public class BookingServiceImpl implements BookingService {
 //    }
     @Override
     @Transactional
-    public String initiateCheckout(BookingCheckoutRequest request) {
-        // Bước 1: Kiểm tra và khóa ghế
+    public String initiateCheckout(BookingCheckoutRequest request,User user) {
+        // Bước 1: Kiểm tra và gia hạn lock
         BookingLockRequest lockRequest = new BookingLockRequest();
         lockRequest.setTripId(request.getTripId());
-        lockRequest.setSeatIds(request.getPassengerTickets().stream()
+        List<Integer> seatIds = request.getPassengerTickets().stream()
                 .map(PassengerTicketDto::getSeatId)
-                .collect(Collectors.toList()));
-       // lockSeats(lockRequest);
-        for (Integer seatId : lockRequest.getSeatIds()) {
+                .toList();
+
+        for (Integer seatId : seatIds) {
             redisSeatLockService.extendSeatLock(request.getTripId(), seatId, Duration.ofMinutes(15));
         }
 
         try {
-            // Bước 2: Lấy thông tin trip và route
+            // Bước 2: Lấy trip và route
             Trip trip = tripRepository.findById(request.getTripId())
                     .orElseThrow(() -> new RuntimeException("Trip not found"));
-
             Route route = trip.getRoute();
-            if (route == null) {
-                throw new RuntimeException("Route not found for trip");
-            }
+            if (route == null) throw new RuntimeException("Route not found for trip");
 
-            // Bước 3: Tạo booking
+            // Bước 3: Load all seats và map theo seatId
+            Map<Integer, Seat> seatMap = seatRepository.findBySeatIdIn(seatIds).stream()
+                    .collect(Collectors.toMap(Seat::getSeatId, s -> s));
+
+            // Bước 4: Load ticketPrices theo route + loại toa
+            List<Carriage.CarriageType> carriageTypes = seatMap.values().stream()
+                    .map(seat -> seat.getCarriage().getCarriageType())
+                    .collect(Collectors.toList());
+
+            Map<Carriage.CarriageType, TicketPrice> priceMap =
+                    ticketPriceRepository.findByRouteAndCarriageTypeAndDateRange(
+                                    route.getRouteId(), carriageTypes, trip.getDepartureTime().toLocalDate()
+                            ).stream()
+                            .collect(Collectors.toMap(TicketPrice::getCarriageType, tp -> tp));
+
+            // Bước 5: Tạo booking
             Booking booking = new Booking();
-            booking.setBookingCode(UUID.randomUUID().toString().substring(0, 8));
+            booking.setUser(user);
+            booking.setBookingCode("BK"+ DateUtils.toString(LocalDateTime.now()));
             booking.setBookingStatus(Booking.BookingStatus.pending);
             booking.setPaymentMethod(Booking.PaymentMethod.valueOf(request.getPaymentMethod()));
             booking.setPaymentStatus(Booking.PaymentStatus.pending);
@@ -131,24 +144,25 @@ public class BookingServiceImpl implements BookingService {
             booking.setTotalAmount(0.0);
             booking = bookingRepository.save(booking);
 
-            // Bước 4: Tạo ticket và tính tổng tiền
+            // Bước 6: Tạo ticket
             double totalBeforePromotion = 0;
             for (PassengerTicketDto pt : request.getPassengerTickets()) {
-                Seat seat = seatRepository.findById(pt.getSeatId())
-                        .orElseThrow(() -> new RuntimeException("Seat not found"));
+                Seat seat = seatMap.get(pt.getSeatId());
+                if (seat == null) throw new RuntimeException("Seat not found: " + pt.getSeatId());
 
-                // Lấy giá vé theo loại toa và tuyến đường
-                double ticketPrice = calculateTicketPrice(route, seat, trip);
+                TicketPrice price = priceMap.get(seat.getCarriage().getCarriageType());
+                if (price == null)
+                    throw new RuntimeException("No price for carriage type: " + seat.getCarriage().getCarriageType());
 
-                // Tạo ticket code unique
+                double ticketPrice = calculateDynamicPrice(price, trip.getDepartureTime());
                 String ticketCode = generateTicketCode();
 
                 Ticket ticket = Ticket.builder()
                         .booking(booking)
                         .trip(trip)
                         .seat(seat)
-                        .originStation(route.getOriginStation()) // Cần thêm vào DTO
-                        .destinationStation(route.getDestinationStation()) // Cần thêm vào DTO
+                        .originStation(route.getOriginStation())
+                        .destinationStation(route.getDestinationStation())
                         .passengerName(pt.getPassengerName())
                         .passengerIdCard(pt.getIdentityCard())
                         .ticketPrice(ticketPrice)
@@ -162,31 +176,27 @@ public class BookingServiceImpl implements BookingService {
                 totalBeforePromotion += ticketPrice;
             }
 
-            // Bước 5: Áp dụng promotion nếu có
+            // Bước 7: Áp dụng khuyến mãi nếu có
             double totalAfterPromotion = totalBeforePromotion;
-            if (request.getPromotionCode() != null && !request.getPromotionCode().isEmpty()) {
+            if (request.getPromotionCode() != null && !request.getPromotionCode().isBlank()) {
                 totalAfterPromotion = applyPromotion(booking, request.getPromotionCode(), totalBeforePromotion);
             }
 
-            // Cập nhật tổng tiền cho booking
             booking.setTotalAmount(totalAfterPromotion);
             bookingRepository.save(booking);
 
-            // Bước 6: Tạo URL thanh toán
-            if ("VNPAY".equalsIgnoreCase(request.getPaymentMethod())) {
-                return vnpayService.generatePaymentUrl(booking);
-            } else {
-                return "/payment-success-local?bookingCode=" + booking.getBookingCode();
-            }
+            // Bước 8: Gửi URL thanh toán
+            return "VNPAY".equalsIgnoreCase(request.getPaymentMethod())
+                    ? vnpayService.generatePaymentUrl(booking)
+                    : "/payment-success-local?bookingCode=" + booking.getBookingCode();
+
         } catch (Exception e) {
-            // Giải phóng khóa nếu có lỗi
-            for (Integer seatId : lockRequest.getSeatIds()) {
-                redisSeatLockService.unlockSeat(request.getTripId(), seatId);
-            }
-            e.printStackTrace();
+            // Giải phóng lock nếu lỗi
+            seatIds.forEach(seatId -> redisSeatLockService.unlockSeat(request.getTripId(), seatId));
             throw e;
         }
     }
+
 
     @Override
     public boolean handleVnPayCallback(String bookingCode, String responseCode) {
@@ -219,39 +229,49 @@ public class BookingServiceImpl implements BookingService {
     /**
      * Tính giá vé dựa trên route, seat và trip
      */
-    private double calculateTicketPrice(Route route, Seat seat, Trip trip) {
-        // Lấy carriage type từ seat
-        Carriage.CarriageType carriageType = seat.getCarriage().getCarriageType();
-
-        // Lấy giá cơ bản từ bảng ticket_prices theo route và carriage type
-        TicketPrice ticketPrice = ticketPriceRepository
-                .findByRouteAndCarriageTypeAndDateRange(route.getRouteId(), carriageType, trip.getDepartureTime().toLocalDate())
-                .orElseThrow(() -> new RuntimeException("Ticket price not found for route: " + route.getRouteId() +
-                        " and carriage type: " + carriageType));
-
-        double finalPrice = ticketPrice.getBasePrice();
-
-        // Áp dụng phụ phí cuối tuần
-        if (isWeekend(trip.getDepartureTime().toLocalDate())) {
-            finalPrice += ticketPrice.getWeekendSurcharge() != null ? ticketPrice.getWeekendSurcharge() : 0;
+//    private double calculateTicketPrice(Route route, Seat seat, Trip trip) {
+//        // Lấy carriage type từ seat
+//        Carriage.CarriageType carriageType = seat.getCarriage().getCarriageType();
+//
+//        // Lấy giá cơ bản từ bảng ticket_prices theo route và carriage type
+//        TicketPrice ticketPrice = ticketPriceRepository
+//                .findByRouteAndCarriageTypeAndDateRange(route.getRouteId(), carriageType, trip.getDepartureTime().toLocalDate())
+//                .orElseThrow(() -> new RuntimeException("Ticket price not found for route: " + route.getRouteId() +
+//                        " and carriage type: " + carriageType));
+//
+//        double finalPrice = ticketPrice.getBasePrice();
+//
+//        // Áp dụng phụ phí cuối tuần
+//        if (isWeekend(trip.getDepartureTime().toLocalDate())) {
+//            finalPrice += ticketPrice.getWeekendSurcharge() != null ? ticketPrice.getWeekendSurcharge() : 0;
+//        }
+//
+//        // Áp dụng phụ phí lễ (cần implement logic check holiday)
+//        if (isHoliday(trip.getDepartureTime().toLocalDate())) {
+//            finalPrice += ticketPrice.getHolidaySurcharge() != null ? ticketPrice.getHolidaySurcharge() : 0;
+//        }
+//
+//        // Áp dụng phụ phí giờ cao điểm
+//        if (isPeakHour(trip.getDepartureTime().toLocalTime())) {
+//            finalPrice += ticketPrice.getPeakHourSurcharge() != null ? ticketPrice.getPeakHourSurcharge() : 0;
+//        }
+//
+//        // Áp dụng discount rate nếu có
+//        if (ticketPrice.getDiscountRate() != null && ticketPrice.getDiscountRate() > 0) {
+//            finalPrice = finalPrice * (1 - ticketPrice.getDiscountRate() / 100);
+//        }
+//
+//        return finalPrice;
+//    }
+    private double calculateDynamicPrice(TicketPrice price, LocalDateTime depTime) {
+        double total = price.getBasePrice();
+        if (isWeekend(depTime.toLocalDate())) total += Optional.ofNullable(price.getWeekendSurcharge()).orElse(0.0);
+        if (isHoliday(depTime.toLocalDate())) total += Optional.ofNullable(price.getHolidaySurcharge()).orElse(0.0);
+        if (isPeakHour(depTime.toLocalTime())) total += Optional.ofNullable(price.getPeakHourSurcharge()).orElse(0.0);
+        if (price.getDiscountRate() != null && price.getDiscountRate() > 0) {
+            total *= (1 - price.getDiscountRate() / 100.0);
         }
-
-        // Áp dụng phụ phí lễ (cần implement logic check holiday)
-        if (isHoliday(trip.getDepartureTime().toLocalDate())) {
-            finalPrice += ticketPrice.getHolidaySurcharge() != null ? ticketPrice.getHolidaySurcharge() : 0;
-        }
-
-        // Áp dụng phụ phí giờ cao điểm
-        if (isPeakHour(trip.getDepartureTime().toLocalTime())) {
-            finalPrice += ticketPrice.getPeakHourSurcharge() != null ? ticketPrice.getPeakHourSurcharge() : 0;
-        }
-
-        // Áp dụng discount rate nếu có
-        if (ticketPrice.getDiscountRate() != null && ticketPrice.getDiscountRate() > 0) {
-            finalPrice = finalPrice * (1 - ticketPrice.getDiscountRate() / 100);
-        }
-
-        return finalPrice;
+        return total;
     }
 
     /**
@@ -444,7 +464,7 @@ public class BookingServiceImpl implements BookingService {
     /**
      * Gửi email xác nhận booking
      */
-    private void sendBookingConfirmationEmail(Booking booking) {
+    private void sendBookingConfirmationEmail(Booking booking) throws MessagingException {
         if (booking.getUser() != null && booking.getUser().getEmail() != null) {
             try {
                 // Lấy thông tin tickets
@@ -455,7 +475,7 @@ public class BookingServiceImpl implements BookingService {
                 String emailContent = buildEmailContent(booking, tickets);
 
                 // Gửi email (cần implement emailService)
-             //   emailService.sendEmail(booking.getUser().getEmail(), emailSubject, emailContent);
+                   emailService.sendEmail(booking.getUser().getEmail(), emailSubject, emailContent);
 
             } catch (Exception e) {
                 log.error("Error sending confirmation email for booking: {}", booking.getBookingCode(), e);
