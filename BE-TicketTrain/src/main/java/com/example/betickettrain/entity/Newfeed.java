@@ -28,4 +28,6 @@ public class Newfeed {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+    @Column(name = "image")
+    private String  image;
 }

@@ -21,7 +21,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +41,7 @@ public class BookingServiceImpl implements BookingService {
     private final PromotionRepository promotionRepository;
     private final BookingPromotionRepository bookingPromotionRepository;
     private final EmailService emailService;
+    private final UserRepository userRepository;
 
     // chưa hoàn thiện vẫn chưa fix dc race condition
     @Override
@@ -99,9 +103,11 @@ public class BookingServiceImpl implements BookingService {
 //    }
     @Override
     @Transactional
-    public String initiateCheckout(BookingCheckoutRequest request,User user) {
-        // Bước 1: Kiểm tra và gia hạn lock
-        BookingLockRequest lockRequest = new BookingLockRequest();
+    public String initiateCheckout(BookingCheckoutRequest request, User user) {
+
+        User userRepositoryById = userRepository.findById(user.getUserId());
+                // Bước 1: Kiểm tra và gia hạn lock
+                BookingLockRequest lockRequest = new BookingLockRequest();
         lockRequest.setTripId(request.getTripId());
         List<Integer> seatIds = request.getPassengerTickets().stream()
                 .map(PassengerTicketDto::getSeatId)
@@ -135,8 +141,8 @@ public class BookingServiceImpl implements BookingService {
 
             // Bước 5: Tạo booking
             Booking booking = new Booking();
-            booking.setUser(user);
-            booking.setBookingCode("BK"+ DateUtils.toString(LocalDateTime.now()));
+            booking.setUser(userRepositoryById);
+            booking.setBookingCode("BK" + DateUtils.toString(LocalDateTime.now()));
             booking.setBookingStatus(Booking.BookingStatus.pending);
             booking.setPaymentMethod(Booking.PaymentMethod.valueOf(request.getPaymentMethod()));
             booking.setPaymentStatus(Booking.PaymentStatus.pending);
@@ -475,7 +481,7 @@ public class BookingServiceImpl implements BookingService {
                 String emailContent = buildEmailContent(booking, tickets);
 
                 // Gửi email (cần implement emailService)
-                   emailService.sendEmail(booking.getUser().getEmail(), emailSubject, emailContent);
+                emailService.sendEmail(booking.getUser().getEmail(), emailSubject, emailContent);
 
             } catch (Exception e) {
                 log.error("Error sending confirmation email for booking: {}", booking.getBookingCode(), e);
