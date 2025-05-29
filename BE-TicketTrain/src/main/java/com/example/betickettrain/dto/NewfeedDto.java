@@ -21,4 +21,5 @@ public class NewfeedDto implements Serializable {
     String image;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
+    String content;
 }

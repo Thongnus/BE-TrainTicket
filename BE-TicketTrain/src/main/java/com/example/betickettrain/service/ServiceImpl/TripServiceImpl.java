@@ -1,8 +1,7 @@
 package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.anotation.LogAction;
-import com.example.betickettrain.dto.TripDto;
-import com.example.betickettrain.dto.TripSearchResult;
+import com.example.betickettrain.dto.*;
 import com.example.betickettrain.entity.*;
 import com.example.betickettrain.exceptions.ErrorCode;
 import com.example.betickettrain.mapper.TripMapper;
@@ -17,8 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -145,6 +145,36 @@ public class TripServiceImpl implements TripService  {
     public List<TripSearchResult> searchTrips(Integer originStationId, Integer destinationStationId, LocalDate departureDate, Integer passengers) {
         return customTripRepository.searchTrips(originStationId, destinationStationId, departureDate, passengers);
     }
+    @Override
+    public Map<String, List<TripSearchResult>> searchRoundTrip(
+            Integer departureId, Integer destinationId,
+            LocalDate departureDate, LocalDate returnDate,
+            Integer passengers) {
+
+        List<TripSearchResult> departureTrips = customTripRepository.searchTrips(
+                departureId, destinationId, departureDate, passengers);
+
+        List<TripSearchResult> returnTrips = customTripRepository.searchTrips(
+                destinationId, departureId, returnDate, passengers);
+
+        Map<String, List<TripSearchResult>> result = new HashMap<>();
+        result.put("departureTrips", departureTrips);
+        result.put("returnTrips", returnTrips);
+
+        return result;
+    }
+
+    @Override
+    public List<TrainRouteDto> findPopularRoutes(int limit) {
+
+        List<TrainRouteProjection> projections = tripRepository.findPopularRoutes(limit);
+        return projections.stream()
+                .map(TrainRouteDto::new) // Ánh xạ từ TrainRouteProjection sang TrainRouteDto
+                .collect(Collectors.toList());
+    }
+
+
+
     private void generateTripSchedulesFromRoute(Trip trip) {
         List<RouteStation> stops = routeStationRepository.findByRouteRouteIdOrderByStopOrderAsc(
                 trip.getRoute().getRouteId()

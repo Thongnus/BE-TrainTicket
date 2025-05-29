@@ -30,4 +30,6 @@ public class Newfeed {
     private LocalDateTime updatedAt;
     @Column(name = "image")
     private String  image;
+    @Column(name = "content")
+    private String content;
 }

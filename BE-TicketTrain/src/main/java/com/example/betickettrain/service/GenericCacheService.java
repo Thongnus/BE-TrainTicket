@@ -63,10 +63,10 @@ public class GenericCacheService {
 
     public <K, V> V get(String cacheName, K key) {
         Map<Object, Object> cache = caches.computeIfAbsent(cacheName, k -> new ConcurrentHashMap<>());
-        if (cache != null && cache.containsKey(key)) {
-            log.info("🔄 Lấy từ LOCAL cache [{}]: key = {}", cacheName, key);
-            return (V) cache.get(key);
-        }
+//        if (cache != null && cache.containsKey(key)) {
+//            log.info("🔄 Lấy từ LOCAL cache [{}]: key = {}", cacheName, key);
+//            return (V) cache.get(key);
+//        }
 
         String redisKey = buildRedisKey(cacheName, key);
         Object value = redisCacheService.getCachedData(redisKey);

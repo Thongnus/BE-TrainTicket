@@ -1,9 +1,6 @@
 package com.example.betickettrain.controller;
 
-import com.example.betickettrain.dto.CarriageSeatDto;
-import com.example.betickettrain.dto.Response;
-import com.example.betickettrain.dto.TripDto;
-import com.example.betickettrain.dto.TripTrackingDto;
+import com.example.betickettrain.dto.*;
 import com.example.betickettrain.entity.Trip;
 import com.example.betickettrain.service.SeatService;
 import com.example.betickettrain.service.TripService;
@@ -20,6 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/trips")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class TripController {
     private final TripService tripService;
     private final SeatService seatService;
@@ -58,12 +56,23 @@ public class TripController {
 
     @GetMapping("/search")
     public Response<?> searchTrips(
-            @RequestParam("origin") Integer originStationId,
+            @RequestParam("departure") Integer originStationId,
             @RequestParam("destination") Integer destinationStationId,
-            @RequestParam("date") LocalDate departureDate,
-            @RequestParam("passengers") Integer passengers
+            @RequestParam("departureDate") LocalDate departureDate,
+            @RequestParam("passengers") Integer passengers,
+            @RequestParam(value = "returnDate", required = false) LocalDate returnDate
     ) {
-        return new Response<>(tripService.searchTrips(originStationId, destinationStationId, departureDate, passengers));
+        if (returnDate != null) {
+            return new Response<>(tripService.searchRoundTrip(
+                    originStationId, destinationStationId,
+                    departureDate, returnDate, passengers
+            ));
+        } else {
+            return new Response<>(tripService.searchTrips(
+                    originStationId, destinationStationId,
+                    departureDate, passengers
+            ));
+        }
     }
 
 
@@ -77,7 +86,11 @@ public class TripController {
     public TripTrackingDto getTracking(@PathVariable Integer tripId) {
         return tripTrackingService.getTripTracking(tripId);
     }
-
+    @GetMapping("/popular")
+    public ResponseEntity<List<TrainRouteDto>> getPopularRoutes(@RequestParam(defaultValue = "12") int limit) {
+        List<TrainRouteDto> popularRoutes = tripService.findPopularRoutes(limit);
+        return ResponseEntity.ok(popularRoutes);
+    }
     @PostMapping("/{tripId}/stations/{stationId}/arrived")
     public void markStationArrived(
             @PathVariable Integer tripId,

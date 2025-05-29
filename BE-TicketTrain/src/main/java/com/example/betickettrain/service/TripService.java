@@ -1,11 +1,17 @@
 package com.example.betickettrain.service;
 
+import com.example.betickettrain.dto.PopularTripDto;
+import com.example.betickettrain.dto.TrainRouteDto;
 import com.example.betickettrain.dto.TripDto;
 import com.example.betickettrain.dto.TripSearchResult;
 import com.example.betickettrain.entity.Trip;
+import org.springframework.data.jpa.repository.query.Procedure;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+
 public interface TripService {
     TripDto createTrip(TripDto dto);
     TripDto updateTrip(Integer id, TripDto dto);
@@ -14,4 +20,11 @@ public interface TripService {
     TripDto updateTripStatus(Integer id, Trip.Status status);
     void deleteTrip(Integer id);
     List<TripSearchResult> searchTrips(Integer originStationId, Integer destinationStationId, LocalDate departureDate, Integer passengers);
+
+    Map<String, List<TripSearchResult>> searchRoundTrip(
+            Integer departureId, Integer destinationId,
+            LocalDate departureDate, LocalDate returnDate,
+            Integer passengers);
+
+    List<TrainRouteDto> findPopularRoutes(int limit);
 }
