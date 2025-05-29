@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -18,6 +19,13 @@ import java.util.Map;
 @Component
 @Slf4j
 public class AuthEntryPointJwt implements AuthenticationEntryPoint {
+
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOrigins("http://localhost:3000")
+                .allowedMethods("GET")
+                .allowCredentials(true);
+    }
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
         log.error("Unauthorized error: {}", authException.getMessage());

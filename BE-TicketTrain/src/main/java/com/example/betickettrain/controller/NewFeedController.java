@@ -9,7 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/newfeeds")
+@RequestMapping("/api/new-feeds")
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class NewFeedController {
     @Autowired
     private NewFeedService newFeedService;

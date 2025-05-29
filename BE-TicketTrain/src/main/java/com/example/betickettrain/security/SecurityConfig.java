@@ -19,6 +19,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 
 @
         Configuration
@@ -44,6 +45,7 @@ public class SecurityConfig {
 //        this.unauthorizedHandler = unauthorizedHandler;
     }
 
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -57,7 +59,7 @@ public class SecurityConfig {
                                 "/v3/api-docs.yaml", "/configuration/**",   "/api/payment/vnpay/callback").permitAll()
                         .requestMatchers("/api/test/user").hasRole("USER")
                         .requestMatchers("/api/test/admin").hasRole("ADMIN")
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 );
               http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                       .exceptionHandling(exception -> exception.authenticationEntryPoint(authEntryPointJwt))

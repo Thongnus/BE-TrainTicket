@@ -18,6 +18,7 @@ public class NewfeedDto implements Serializable {
     Long id;
     String title;
     String description;
+    String image;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
 }
