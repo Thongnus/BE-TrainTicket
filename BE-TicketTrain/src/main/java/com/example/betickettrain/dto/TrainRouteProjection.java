@@ -10,4 +10,6 @@ public interface TrainRouteProjection {
     LocalDateTime getArrivalTime();
     String getTrainNumber();
     Double getAveragePrice();
+    Integer getOriginStation();
+    Integer getDestinationStation();
 }

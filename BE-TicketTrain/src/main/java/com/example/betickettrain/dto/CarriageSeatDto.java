@@ -15,4 +15,5 @@ public class CarriageSeatDto {
     private String carriageType;
     private Integer capacity;
     private List<SeatDto> seats;
+
 }

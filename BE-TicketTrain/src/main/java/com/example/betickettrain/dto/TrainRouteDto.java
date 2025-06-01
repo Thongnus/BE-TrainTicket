@@ -12,7 +12,8 @@ public class TrainRouteDto {
     private String duration;
     private String trainNumber;
     private Double averagePrice;
-
+    private Integer originStationId;
+    private Integer destinationStationId;
     public TrainRouteDto(Integer tripId, String departure, String arrival, LocalDateTime departureTime, LocalDateTime arrivalTime, String trainNumber, Double averagePrice) {
         this.tripId = tripId;
         this.departure = departure;
@@ -30,6 +31,8 @@ public class TrainRouteDto {
         this.trainNumber = projection.getTrainNumber();
         this.averagePrice = projection.getAveragePrice();
         this.duration = calculateDuration(projection.getDepartureTime(), projection.getArrivalTime());
+        this.originStationId = projection.getOriginStation();
+        this.destinationStationId = projection.getDestinationStation();
     }
 
     private String calculateDuration(LocalDateTime departureTime, LocalDateTime arrivalTime) {

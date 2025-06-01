@@ -26,4 +26,7 @@ public class BookingDto implements Serializable {
     LocalDateTime paymentDate;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
+    private UserDto user;
+
+
 }

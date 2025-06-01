@@ -26,4 +26,5 @@ public class TripDto implements Serializable {
     Integer delayMinutes;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
+
 }

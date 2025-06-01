@@ -61,7 +61,7 @@ public class TripController {
             @RequestParam("departureDate") LocalDate departureDate,
             @RequestParam("passengers") Integer passengers,
             @RequestParam(value = "returnDate", required = false) LocalDate returnDate
-    ) {
+    ) { // sau nay bo sung validate ở Be
         if (returnDate != null) {
             return new Response<>(tripService.searchRoundTrip(
                     originStationId, destinationStationId,
@@ -77,7 +77,7 @@ public class TripController {
 
 
     @GetMapping("/{tripId}/carriages-with-seats")
-    public Response<List<CarriageSeatDto>> getCarriagesWithSeats(@PathVariable Integer tripId) {
+    public Response<List<TripWithSeatsDto>> getCarriagesWithSeats(@PathVariable Integer tripId ) {
         return new Response<>(seatService.getCarriagesWithSeats(tripId));
     }
 
@@ -87,7 +87,7 @@ public class TripController {
         return tripTrackingService.getTripTracking(tripId);
     }
     @GetMapping("/popular")
-    public ResponseEntity<List<TrainRouteDto>> getPopularRoutes(@RequestParam(defaultValue = "12") int limit) {
+    public ResponseEntity<List<TrainRouteDto>> getPopularRoutes(@RequestParam(defaultValue = "12") int limit ) {
         List<TrainRouteDto> popularRoutes = tripService.findPopularRoutes(limit);
         return ResponseEntity.ok(popularRoutes);
     }

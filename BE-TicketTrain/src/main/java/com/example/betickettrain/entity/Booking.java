@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 
@@ -48,7 +47,7 @@ public class Booking {
     private BookingStatus bookingStatus;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "payment_method", nullable = false, columnDefinition = "ENUM('vnPay','credit_card', 'bank_transfer', 'e_wallet', 'cash')")
+    @Column(name = "payment_method", nullable = false, columnDefinition = "ENUM('vnpay','credit_card', 'bank_transfer', 'e_wallet', 'cash')")
     private PaymentMethod paymentMethod;
 
     @Column(name = "payment_date")
@@ -71,6 +70,6 @@ public class Booking {
     }
 
     public enum PaymentMethod {
-        vnPay,credit_card, bank_transfer, e_wallet, cash
+        vnpay,credit_card, bank_transfer, e_wallet, cash
     }
 }

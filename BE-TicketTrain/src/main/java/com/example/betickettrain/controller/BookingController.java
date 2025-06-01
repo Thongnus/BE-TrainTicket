@@ -1,19 +1,20 @@
 package com.example.betickettrain.controller;
 
 
-import com.example.betickettrain.dto.BookingCheckoutRequest;
-import com.example.betickettrain.dto.BookingLockRequest;
+import com.example.betickettrain.dto.*;
 import com.example.betickettrain.entity.User;
 import com.example.betickettrain.service.BookingService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -21,6 +22,7 @@ import java.util.Map;
 @Slf4j
 @RequestMapping("/api/bookings")
 @AllArgsConstructor
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class BookingController {
 
     private final BookingService bookingService;
@@ -36,5 +38,14 @@ public class BookingController {
         String paymentUrl = bookingService.initiateCheckout(request,user);
         return ResponseEntity.ok(Map.of("paymentUrl", paymentUrl));
     }
-
+    @GetMapping
+    public ResponseEntity<Page<BookingDto>> searchBookings(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false, defaultValue = "all") String bookingStatus,
+            @RequestParam(required = false, defaultValue = "all") String paymentStatus,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        Page<BookingDto> result = bookingService.findBookings(search, bookingStatus, paymentStatus, pageable);
+        return ResponseEntity.ok(result);
+    }
 }

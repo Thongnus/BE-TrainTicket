@@ -1,5 +1,8 @@
 package com.example.betickettrain.service.ServiceImpl;
 
+import com.example.betickettrain.entity.Booking;
+import com.example.betickettrain.entity.Notification;
+import com.example.betickettrain.repository.NotificationRepository;
 import com.example.betickettrain.service.EmailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -8,11 +11,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+
+import java.time.format.DateTimeFormatter;
+
 @Service
 @Slf4j
 public class EmailServiceImpl implements EmailService {
+
     @Autowired
     private JavaMailSender mailSender;
+    @Autowired
+    private NotificationRepository notificationRepository;
+
 
     @Override
     public void sendEmail(String to, String subject, String body) {
@@ -29,6 +39,93 @@ public class EmailServiceImpl implements EmailService {
         } catch (MessagingException e) {
             log.error("❌ Failed to send email to {}", to, e);
             throw new RuntimeException("Failed to send email", e);
+        }
+    }
+
+
+    @Override
+    public void createSuccessNotification(Booking booking) {
+        try {
+            Notification notification = new Notification();
+            notification.setUser(booking.getUser());
+            notification.setTitle("Xác nhận đặt vé thành công");
+            notification.setMessage("Email xác nhận đặt vé " + booking.getBookingCode() + " đã được gửi đến địa chỉ email của bạn.");
+            notification.setNotificationType(Notification.NotificationType.booking);
+            notification.setRelatedId(booking.getBookingId());
+            notification.setIsRead(false);
+
+            notificationRepository.save(notification);
+        } catch (Exception e) {
+            log.warn("Failed to create success notification for booking: {}", booking.getBookingCode(), e);
+        }
+    }
+
+    /**
+     * Tạo notification backup khi email fail
+     */
+    // Tạo notification backup khi email fail
+    @Override
+    public void createEmailFailureNotification(Booking booking) {
+        try {
+            Notification notification = new Notification();
+            notification.setUser(booking.getUser());
+            notification.setTitle("Đặt vé thành công - " + booking.getBookingCode());
+            notification.setMessage(String.format(
+                    "Chúc mừng! Bạn đã đặt vé thành công.\n" +
+                            "Mã đặt vé: %s\n" +
+                            "Thời gian thanh toán: %s\n" +
+                            "Email xác nhận sẽ được gửi trong thời gian sớm nhất.",
+                    booking.getBookingCode(),
+                    booking.getPaymentDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+            ));
+            notification.setNotificationType(Notification.NotificationType.booking);
+            notification.setRelatedId(booking.getBookingId());
+            notification.setIsRead(false);
+
+            notificationRepository.save(notification);
+            log.info("Created backup notification for booking: {}", booking.getBookingCode());
+
+        } catch (Exception e) {
+            log.error("Failed to create backup notification for booking: {}", booking.getBookingCode(), e);
+        }
+    }
+
+    @Override
+    public void createPermanentFailureNotification(Booking booking) {
+        try {
+            Notification notification = new Notification();
+            notification.setUser(booking.getUser());
+            notification.setTitle("Thông tin đặt vé - " + booking.getBookingCode());
+            notification.setMessage(String.format(
+                    "Đặt vé của bạn đã thành công!\n" +
+                            "Mã đặt vé: %s\n" +
+                            "Thời gian thanh toán: %s\n" +
+                            "Vui lòng liên hệ bộ phận CSKH để nhận thông tin chi tiết về vé.",
+                    booking.getBookingCode(),
+                    booking.getPaymentDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+            ));
+            notification.setNotificationType(Notification.NotificationType.booking);
+            notification.setRelatedId(booking.getBookingId());
+            notification.setIsRead(false);
+
+            notificationRepository.save(notification);
+
+            // Optional: Notify admin
+            notifyAdminEmailFailure(booking);
+
+        } catch (Exception e) {
+            log.error("Failed to create permanent failure notification", e);
+        }
+    }
+
+    @Override
+    public void notifyAdminEmailFailure(Booking booking) {
+        try {
+            log.error("ADMIN ALERT: Email confirmation failed permanently for booking: {}",
+                    booking.getBookingCode());
+            // Có thể gửi Slack, email admin, hoặc tạo admin notification
+        } catch (Exception e) {
+            log.error("Failed to notify admin about email failure", e);
         }
     }
 }

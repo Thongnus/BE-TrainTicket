@@ -2,10 +2,11 @@ package com.example.betickettrain.service;
 
 import com.example.betickettrain.dto.CarriageSeatDto;
 import com.example.betickettrain.dto.SeatDto;
+import com.example.betickettrain.dto.TripWithSeatsDto;
 
 import java.util.List;
 public interface SeatService {
-        List<CarriageSeatDto> getCarriagesWithSeats(Integer tripId);
+        List<TripWithSeatsDto> getCarriagesWithSeats(Integer tripId);
 
         SeatDto createSeat(SeatDto seatDto);
 

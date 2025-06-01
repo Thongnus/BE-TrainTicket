@@ -9,6 +9,22 @@ public final class Constants {
 
 
     }
+
+    public static final class Role{
+        public static final String ADMIN = "ADMIN";
+        public static final String USER = "USER";
+    }
+    public static final class  User {
+        public static final String USER_NOT_FOUND = "User not found";
+        public static final String USER_ALREADY_EXISTS = "User already exists";
+        public static final String USER_DELETED = "User deleted";
+        public static final String USER_UPDATED = "User updated";
+        public static final String USER_CREATED = "User created";
+        public static final String USER_LOGIN_SUCCESS = "User login success";
+        public static final String STATUS_ACTIVE = "active" ;
+        public static final String STATUS_BAN ="banned";
+        public static final String STATUS_INACTIVE ="inactive";
+    }
     public static final class Cache {
         public static final String CACHE_NEWFEED = "newFeed";
         public static final String CACHE_FEED = "feed";

@@ -1,26 +1,38 @@
 package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.anotation.LogAction;
+import com.example.betickettrain.dto.UserDto;
 import com.example.betickettrain.entity.Role;
 import com.example.betickettrain.entity.User;
+import com.example.betickettrain.mapper.UserMapper;
 import com.example.betickettrain.repository.RoleRepository;
 import com.example.betickettrain.repository.UserRepository;
 import com.example.betickettrain.service.UserService;
 import com.example.betickettrain.util.Constants;
+import jakarta.persistence.criteria.Predicate;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
+@RequiredArgsConstructor
 @Service
 public class User_impl implements UserService {
-    UserRepository userRepository;
+    //    @Autowired
 
+    UserRepository userRepository;
+    @Autowired
+    UserMapper userMapper;
     @Autowired
     RoleRepository role_Reponsitory;
 
@@ -73,7 +85,7 @@ public class User_impl implements UserService {
     }
 
     @Override
-    @LogAction(action = Constants.Action.UPDATE,entity = "User", description = " Update a user")
+    @LogAction(action = Constants.Action.UPDATE, entity = "User", description = " Update a user")
     public User update(User user) {
 
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
@@ -96,7 +108,7 @@ public class User_impl implements UserService {
         return userRepository.findById(id);
     }
 
-    @LogAction(action = Constants.Action.DELETE,entity = "User", description = " Update a user")
+    @LogAction(action = Constants.Action.DELETE, entity = "User", description = " Update a user")
     @Override
     public void deleteuserbyID(int id) {
         userRepository.deleteById(id);
@@ -107,5 +119,78 @@ public class User_impl implements UserService {
         return userRepository.findByUsernameContaining(name);
     }
 
+    @Override
+    public Page<UserDto> findUsers(String search, String role, String status, Pageable pageable) {
+        Specification<User> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
 
+            if (search != null && !search.isEmpty()) {
+                String searchPattern = "%" + search.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("username")), searchPattern),
+                        cb.like(cb.lower(root.get("fullName")), searchPattern),
+                        cb.like(cb.lower(root.get("email")), searchPattern)
+                ));
+            }
+
+            // FIX: Sử dụng join và so sánh theo tên role
+            if (role != null && !role.equals("all")) {
+                predicates.add(cb.equal(
+                        root.join("roles").get("name"),
+                        "ROLE_" + role.toUpperCase()
+                ));
+            }
+
+            if (status != null && !status.equals("all")) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return userRepository.findAll(spec, pageable).map(userMapper::toDto);
+    }
+
+    @Override
+    public UserDto createUser(UserDto userDto) {
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        User user = userMapper.toEntity(userDto);
+        user.setPassword(passwordEncoder.encode(userDto.getPassword()));
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+        user.setRoles(userDto.getRoles());
+        user.setLastLogin(null);
+        user.setStatus("active");
+        User savedUser = userRepository.save(user);
+        return userMapper.toDto(savedUser);
+    }
+
+
+    @Override
+    public void deleteUser(Long id) {
+        if (!userRepository.existsById(Math.toIntExact(id))) {
+            throw new RuntimeException("Không tìm thấy người dùng với ID: " + id);
+        }
+        userRepository.deleteById(Math.toIntExact(id));
+    }
+
+    @Override
+    public UserDto toggleStatus(Long id, String status) {
+        User user = userRepository.findById(id);
+        if (user == null) throw new RuntimeException("Không tìm thấy người dùng với ID: " + id);
+        if (!status.equals(Constants.User.STATUS_ACTIVE) && !status.equals(Constants.User.STATUS_INACTIVE) && !status.equals(Constants.User.STATUS_BAN)) {
+            throw new RuntimeException("Trạng thái không hợp lệ: " + status);
+        }
+        user.setStatus(status);
+        user.setUpdatedAt(LocalDateTime.now());
+        User updatedUser = userRepository.save(user);
+        return userMapper.toDto(updatedUser);
+    }
+
+    @Override
+    public UserDto findUserById(Long id) {
+        User user = userRepository.findById(id);
+        if (user == null) throw new RuntimeException("Không tìm thấy người dùng với ID: " + id);
+        return userMapper.toDto(user);
+    }
 }

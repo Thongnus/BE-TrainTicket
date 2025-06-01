@@ -11,6 +11,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -68,6 +69,9 @@ public class User  implements UserDetails {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    private Instant lastLogin;
+
+    private String status; // Thêm status
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Collection<SimpleGrantedAuthority> authorities = roles.stream()

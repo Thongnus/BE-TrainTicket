@@ -1,10 +1,11 @@
 package com.example.betickettrain.dto;
 
 import com.example.betickettrain.entity.Role;
-import com.example.betickettrain.entity.User;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Value;
 
 import java.io.Serializable;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -14,7 +15,7 @@ import java.util.Set;
  */
 @Value
 public class UserDto implements Serializable {
-    Integer userId;
+    Long userId;
     String username;
     String password;
     String fullName;
@@ -22,8 +23,13 @@ public class UserDto implements Serializable {
     String phone;
     String address;
     String idCard;
+    @JsonFormat(pattern = "dd/MM/yyyy")
     LocalDate dateOfBirth;
-    Set<Role> role;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime updatedAt;
+    Set<Role> roles;
+    Instant lastLogin;
+    String status; // Thêm status
 }

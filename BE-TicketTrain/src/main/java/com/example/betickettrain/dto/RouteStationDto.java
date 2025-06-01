@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor // ✅ BẮT BUỘC CHO JACKSON
 @AllArgsConstructor
 public class RouteStationDto implements Serializable {
+
     Integer routeStationId;
     Integer stopOrder;
     Integer arrivalOffset;
@@ -22,4 +23,6 @@ public class RouteStationDto implements Serializable {
     Float distanceFromOrigin;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
+    private Integer routeId;
+    private Integer stationId;
 }

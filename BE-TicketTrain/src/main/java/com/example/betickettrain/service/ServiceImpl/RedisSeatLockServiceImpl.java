@@ -28,7 +28,7 @@ public class RedisSeatLockServiceImpl implements RedisSeatLockService {
         return Boolean.TRUE.equals(success);
     }
 
-
+    // pthuc này chưa tối ưu (*)
     @Override
     public Set<Integer> getLockedSeats(Integer tripId) {
         Set<String> keys = redisTemplate.keys("lock:trip:" + tripId + ":seat:*");

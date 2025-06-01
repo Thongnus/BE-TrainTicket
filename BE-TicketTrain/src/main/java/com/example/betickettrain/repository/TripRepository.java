@@ -1,9 +1,7 @@
 package com.example.betickettrain.repository;
 
 import com.example.betickettrain.dto.PopularTripDto;
-import com.example.betickettrain.dto.TrainRouteDto;
 import com.example.betickettrain.dto.TrainRouteProjection;
-import com.example.betickettrain.entity.Ticket;
 import com.example.betickettrain.entity.Trip;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,7 +15,7 @@ import java.util.Optional;
 public interface TripRepository extends JpaRepository<Trip, Integer> {
     boolean existsByTripCode(String tripCode);
 
-    @Query( nativeQuery = true,value = "select * from Trips t where DATE(departure_time) = :date and t.status")
+    @Query(nativeQuery = true, value = "select * from Trips t where DATE(departure_time) = :date and t.status")
     Trip findTripByDepartureTimeAndStatus(LocalDateTime departureTime, String status);
 
     @Procedure(procedureName = "find_trip_by_trip_code")
@@ -30,6 +28,7 @@ public interface TripRepository extends JpaRepository<Trip, Integer> {
             "JOIN FETCH t.train " +
             "WHERE t.tripId = :tripId")
     Optional<Trip> findByIdWithRouteAndStations(@Param("tripId") Integer tripId);
+
     @Query(nativeQuery = true, value = "SELECT " +
             "t.trip_id AS tripId, " +
             "t.trip_code AS tripCode, " +
@@ -49,10 +48,13 @@ public interface TripRepository extends JpaRepository<Trip, Integer> {
             "ORDER BY total_tickets DESC, average_rating DESC " +
             "LIMIT 12")
     List<PopularTripDto> getTripPopular();
-    @Query(nativeQuery = true ,value = """
+
+    @Query(nativeQuery = true, value = """
             
                         SELECT\s
                 t.trip_id AS tripId,
+                 tk.origin_station_id AS originStation,
+                tk.destination_station_id AS  destinationStation,
                 s1.station_name AS departure,
                 s2.station_name AS arrival,
                 t.departure_time AS departureTime,
@@ -66,7 +68,7 @@ public interface TripRepository extends JpaRepository<Trip, Integer> {
                         JOIN stations s1 ON tk.origin_station_id = s1.station_id
                         JOIN stations s2 ON tk.destination_station_id = s2.station_id
                         WHERE tk.ticket_status IN ('booked', 'checked_in', 'used')
-                        GROUP BY t.trip_id, s1.station_name, s2.station_name, t.departure_time, t.arrival_time, tr.train_number
+                        GROUP BY t.trip_id, s1.station_name, s2.station_name, t.departure_time, t.arrival_time, tr.train_number,tk.origin_station_id ,  tk.destination_station_id
                         HAVING COUNT(tk.ticket_id) > 0
                         ORDER BY ticketCount DESC
                         LIMIT :limit;
