@@ -151,6 +151,11 @@ public class JwtService {
         return expiration.before(new Date());
     }
 
+
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
     // Kiểm tra refresh token hết hạn chưa
     public boolean isTokenExpiredRefresh(String token) {
         Date expiration = extractClaimFromRefreshToken(token, Claims::getExpiration);

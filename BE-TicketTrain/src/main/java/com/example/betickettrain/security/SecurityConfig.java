@@ -27,18 +27,18 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final UserService userDetailsService;
+
     private final JwtAuthenticationFilter jwtAuthFilter;
     //    private final AuthenticationEntryPointImpl unauthorizedHandler;
     private final AuthEntryPointJwt authEntryPointJwt;
 
     public SecurityConfig(
-            UserService userDetailsService,
+
             JwtAuthenticationFilter jwtAuthFilter,
             AuthEntryPointJwt authEntryPointJwt, AuthEntryPointJwt authEntryPointJwt1
 //            AuthenticationEntryPointImpl unauthorizedHandler
     ) {
-        this.userDetailsService = userDetailsService;
+
         this.jwtAuthFilter = jwtAuthFilter;
         this.authEntryPointJwt = authEntryPointJwt1;
 

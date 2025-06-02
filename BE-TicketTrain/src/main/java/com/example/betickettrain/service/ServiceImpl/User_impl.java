@@ -1,6 +1,7 @@
 package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.anotation.LogAction;
+import com.example.betickettrain.dto.SignupRequest;
 import com.example.betickettrain.dto.UserDto;
 import com.example.betickettrain.entity.Role;
 import com.example.betickettrain.entity.User;
@@ -18,7 +19,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import javax.management.relation.RoleNotFoundException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -28,18 +31,19 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Service
 public class User_impl implements UserService {
-    //    @Autowired
-
     UserRepository userRepository;
     @Autowired
     UserMapper userMapper;
     @Autowired
     RoleRepository role_Reponsitory;
 
+    private final  PasswordEncoder passwordEncoder;
+
     @Autowired
-    public User_impl(UserRepository userReponsitory) {
+    public User_impl(UserRepository userReponsitory, PasswordEncoder passwordEncoder) {
         this.userRepository = userReponsitory;
 
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -47,7 +51,7 @@ public class User_impl implements UserService {
         return userRepository.findByUsername(name);
 
     }
-
+    @Transactional
     //cần lưu ý
     @Override
     public User saveTT(User user) {
@@ -70,6 +74,30 @@ public class User_impl implements UserService {
 
     }
 
+    @Transactional
+    @Override
+    public UserDto registerUser(SignupRequest signupRequest) throws RoleNotFoundException {
+        if (userRepository.existsUserByUsername(signupRequest.getUserName())) {
+            throw new RuntimeException("Username is already taken!");
+        }
+
+        User user = createUserFromRequest(signupRequest);
+        return userMapper.toDto(userRepository.save(user));
+
+
+    }
+
+    private User createUserFromRequest(SignupRequest request) throws RoleNotFoundException {
+        User user = new User();
+        user.setUsername(request.getUserName());
+        user.setFullName(request.getFullName());
+        user.setEmail(request.getEmail());
+        user.setPhone(request.getPhoneNumber());
+        user.setPassword(passwordEncoder.encode(request.getPassWord()));
+        user.setRoles(assignRoles(request.getRoles()));
+
+        return user;
+    }
 
     @Override
     public Page<User> getallUser(Pageable pageable) {
@@ -101,6 +129,25 @@ public class User_impl implements UserService {
 
 
         return userRepository.save(user);
+    }
+
+    private Set<Role> assignRoles(Set<String> requestedRoles) throws RoleNotFoundException {
+        Set<Role> roles = new HashSet<>();
+
+        // Default role
+        if (requestedRoles == null || requestedRoles.isEmpty()) {
+            Role userRole = role_Reponsitory.findByName(Constants.Role.ROLE_CUSTOMER);
+            if (userRole == null) throw new RoleNotFoundException("Role CUSTOMER not found");
+            roles.add(userRole);
+        }
+        // Admin role if requested
+        if (requestedRoles != null && requestedRoles.contains("ADMIN")) {
+            Role adminRole = role_Reponsitory.findByName(Constants.Role.ROLE_ADMIN);
+            if (adminRole == null) throw new RoleNotFoundException("Role ADMIN not found");
+            roles.add(adminRole);
+        }
+
+        return roles;
     }
 
     @Override

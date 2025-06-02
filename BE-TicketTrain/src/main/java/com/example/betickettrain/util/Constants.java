@@ -11,8 +11,10 @@ public final class Constants {
     }
 
     public static final class Role{
-        public static final String ADMIN = "ADMIN";
-        public static final String USER = "USER";
+        public static final String ROLE_CUSTOMER = "ROLE_CUSTOMER";
+        public static final String ROLE_ADMIN = "ROLE_ADMIN";
+        public static final String ROLE_MANAGER = "ROLE_MANAGER";
+        public static final String ROLE_SUPER_ADMIN = "ROLE_STAFF";
     }
     public static final class  User {
         public static final String USER_NOT_FOUND = "User not found";
