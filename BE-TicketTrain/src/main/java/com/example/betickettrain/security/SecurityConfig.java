@@ -6,6 +6,7 @@ import com.example.betickettrain.service.UserService;
 import com.example.betickettrain.service.ServiceImpl.UserServiceimp;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
@@ -34,8 +35,8 @@ public class SecurityConfig {
 
     public SecurityConfig(
 
-            JwtAuthenticationFilter jwtAuthFilter,
-            AuthEntryPointJwt authEntryPointJwt, AuthEntryPointJwt authEntryPointJwt1
+            @Lazy JwtAuthenticationFilter jwtAuthFilter,
+            AuthEntryPointJwt authEntryPointJwt1
 //            AuthenticationEntryPointImpl unauthorizedHandler
     ) {
 

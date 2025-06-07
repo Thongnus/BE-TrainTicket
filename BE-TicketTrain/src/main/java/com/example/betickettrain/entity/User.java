@@ -79,5 +79,6 @@ public class User  implements UserDetails {
                 .collect(Collectors.toSet());
         return authorities;
     }
-
+    public enum Status {active, inactive
+    }
 }

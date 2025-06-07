@@ -12,4 +12,6 @@ public interface BookingMapper {
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     Booking partialUpdate(BookingDto bookingDto, @MappingTarget Booking booking);
+
+
 }

@@ -1,13 +1,12 @@
 package com.example.betickettrain.service.ServiceImpl;
 
-import com.example.betickettrain.dto.BookingCheckoutRequest;
-import com.example.betickettrain.dto.BookingDto;
-import com.example.betickettrain.dto.BookingLockRequest;
-import com.example.betickettrain.dto.PassengerTicketDto;
+import com.example.betickettrain.dto.*;
 import com.example.betickettrain.entity.*;
 import com.example.betickettrain.exceptions.ErrorCode;
 import com.example.betickettrain.exceptions.SeatLockedException;
 import com.example.betickettrain.mapper.BookingMapper;
+import com.example.betickettrain.mapper.PaymentMapper;
+import com.example.betickettrain.mapper.TicketMapper;
 import com.example.betickettrain.repository.*;
 import com.example.betickettrain.service.BookingService;
 import com.example.betickettrain.service.EmailService;
@@ -38,6 +37,8 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 @Slf4j
 public class BookingServiceImpl implements BookingService {
+    private final TicketMapper ticketMapper;
+    private final PaymentMapper paymentMapper;
     private final RedisSeatLockService redisSeatLockService;
     private final BookingRepository bookingRepository;
     private final TripRepository tripRepository;
@@ -52,10 +53,11 @@ public class BookingServiceImpl implements BookingService {
     private final BookingMapper bookingMapper;
 
     private final NotificationRepository notificationRepository;
+    private final PaymentRepository paymentRepository;
 
     private static String buildEmailContent(Booking booking, List<Ticket> tickets) {
         StringBuilder content = new StringBuilder();
-        content.append("Kính chào ").append(booking.getUser().getFullName()).append(",\n\n");
+        content.append("Kính chào Quý Khách hàng  \n ");
         content.append("Cảm ơn bạn đã sử dụng dịch vụ đặt vé tàu của chúng tôi.\n");
         content.append("Thông tin đặt vé của bạn:\n\n");
         content.append("Mã booking: ").append(booking.getBookingCode()).append("\n");
@@ -105,7 +107,7 @@ public class BookingServiceImpl implements BookingService {
         for (Integer seatId : request.getSeatIds()) {
             boolean locked = redisSeatLockService.tryLockSeat(request.getTripId(), seatId, Duration.ofMinutes(15));
             if (!locked) {
-                throw new RuntimeException("Không thể khóa ghế " + seatId + ".");
+                throw new SeatLockedException(ErrorCode.SEAT_LOCK, "ghế đã bị khóa : " + seatId + ".");
             }
             log.info("✅ Locked seat: {}", seatId);
         }
@@ -149,27 +151,28 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public String initiateCheckout(BookingCheckoutRequest request, User user) {
-        List<Integer> lockedSeatIds = new ArrayList<>();
 
-        //tam thời chưa login nên chưa có user
 
         try {
             // ======= Bước 1: Lock ghế lượt đi =======
             List<Integer> outboundSeatIds = request.getPassengerTickets().stream().map(PassengerTicketDto::getSeatId).toList();
             lockSeats(new BookingLockRequest(request.getTripId(), outboundSeatIds));
-            lockedSeatIds.addAll(outboundSeatIds);
+
 
             // Nếu có chiều về thì lock luôn
             if (request.getReturnTripId() != null && request.getReturnPassengerTickets() != null) {
                 List<Integer> returnSeatIds = request.getReturnPassengerTickets().stream().map(PassengerTicketDto::getSeatId).toList();
                 lockSeats(new BookingLockRequest(request.getReturnTripId(), returnSeatIds));
-                lockedSeatIds.addAll(returnSeatIds);
+
             }
 
             // ======= Bước 2: Lấy thông tin user và tạo Booking =======
             //  User userInDb = userRepository.findById(user.getUserId());
             Booking booking = new Booking();
-            // booking.setUser(userInDb);
+            booking.setUser(user);
+
+            booking.setContactEmail(request.getInfoEmail());
+            booking.setContactPhone(request.getInfoPhone());
             booking.setBookingCode("BK" + DateUtils.toString(LocalDateTime.now()));
             booking.setBookingStatus(Booking.BookingStatus.pending);
             booking.setPaymentMethod(Booking.PaymentMethod.valueOf(request.getPaymentMethod().toLowerCase()));
@@ -203,9 +206,17 @@ public class BookingServiceImpl implements BookingService {
 
         } catch (Exception e) {
             // ======= Giải phóng toàn bộ ghế đã lock nếu lỗi =======
-            for (Integer seatId : lockedSeatIds) {
+            List<Integer> outboundSeatIds = request.getPassengerTickets().stream()
+                    .map(PassengerTicketDto::getSeatId).toList();
+            for (Integer seatId : outboundSeatIds) {
                 redisSeatLockService.unlockSeat(request.getTripId(), seatId);
-                if (request.getReturnTripId() != null) {
+            }
+
+            // Unlock return seats if exists
+            if (request.getReturnTripId() != null && request.getReturnPassengerTickets() != null) {
+                List<Integer> returnSeatIds = request.getReturnPassengerTickets().stream()
+                        .map(PassengerTicketDto::getSeatId).toList();
+                for (Integer seatId : returnSeatIds) {
                     redisSeatLockService.unlockSeat(request.getReturnTripId(), seatId);
                 }
             }
@@ -253,13 +264,15 @@ public class BookingServiceImpl implements BookingService {
                     //  .isReturnTrip(isReturn) // bạn cần thêm field này nếu phân biệt lượt về
                     .build();
 
-            ticketRepository.save(ticket);
+            Ticket t = ticketRepository.save(ticket);
+            log.debug(ticket.toString() + "TICKet");
             total += ticketPrice;
         }
 
         return total;
     }
 
+    @Transactional
     @Override
     public boolean handleVnPayCallback(String bookingCode, String responseCode) {
         try {
@@ -310,6 +323,34 @@ public class BookingServiceImpl implements BookingService {
 
         return bookingRepository.findAll(spec, pageable).map(bookingMapper::toDto);
     }
+
+    @Override
+    public List<BookingHistoryDTO> getBookingHistorybyUser(Long userId) {
+
+        List<BookingHistoryDTO> bookingHistoryDTOs = new ArrayList<>();
+        List<Booking> booking = bookingRepository.findAllByUser_UserId(userId);
+
+        for (Booking b : booking) {
+            BookingHistoryDTO bookingHistoryDTO = new BookingHistoryDTO();
+            List<TicketDto> tickets = ticketRepository.findByBookingBookingId(b.getBookingId()).stream().map(ticketMapper::toDto).toList();
+            List<PassengerTicketDto> passengerTicketDtos = new ArrayList<>();
+            for (TicketDto ticketDto : tickets) {
+                passengerTicketDtos.add(new PassengerTicketDto(ticketDto.getSeat().getSeatId(), ticketDto.getPassengerName(), ticketDto.getPassengerIdCard()));
+            }
+            PaymentDto payment = paymentMapper.toDto(paymentRepository.findByBooking_BookingId(b.getBookingId()));
+            bookingHistoryDTO.setBookingId(b.getBookingId());
+            bookingHistoryDTO.setBookingCode(b.getBookingCode());
+            bookingHistoryDTO.setBookingStatus(b.getBookingStatus().toString());
+            bookingHistoryDTO.setTotalAmount(b.getTotalAmount());
+            bookingHistoryDTO.setCreatedAt(b.getCreatedAt());
+            bookingHistoryDTO.setPayment(payment);
+            bookingHistoryDTO.setTrip(tickets.get(0).getTrip());
+            bookingHistoryDTO.setPassengers(passengerTicketDtos);
+            bookingHistoryDTOs.add(bookingHistoryDTO);
+        }
+        return bookingHistoryDTOs;
+    }
+
 
     /**
      * Tính giá vé dựa trên route, seat và trip
@@ -447,7 +488,7 @@ public class BookingServiceImpl implements BookingService {
     /**
      * Xử lý thanh toán thành công
      */
-    private boolean handleSuccessfulPayment(Booking booking) {
+    public boolean handleSuccessfulPayment(Booking booking) {
         try {
             // Cập nhật trạng thái booking
             booking.setPaymentStatus(Booking.PaymentStatus.paid);
@@ -464,16 +505,27 @@ public class BookingServiceImpl implements BookingService {
             }
             ticketRepository.saveAll(tickets);
 
+            // Tạo bản ghi Payment
+            Payment payment = Payment.builder()
+                    .booking(booking)
+                    .paymentAmount(booking.getTotalAmount())
+                    .paymentMethod(booking.getPaymentMethod())
+                    .transactionId("VNPAY_" + booking.getBookingCode()) // hoặc lấy transactionId từ callback
+                    .status(Payment.Status.completed)
+                    .paymentDetails("{\"gateway\": \"VNPAY\", \"responseCode\": \"00\"}")
+                    .build();
+
+            paymentRepository.save(payment);
             // Giải phóng lock ghế (vì đã book thành công)
             for (Ticket ticket : tickets) {
                 redisSeatLockService.unlockSeat(ticket.getTrip().getTripId(), ticket.getSeat().getSeatId());
             }
-
             // Gửi email xác nhận (nếu có)
             try {
 
                 sendBookingConfirmationEmail(booking);
             } catch (Exception e) {
+                e.printStackTrace();
                 log.warn("Failed to send confirmation email for booking: {}", booking.getBookingCode(), e);
                 // Không throw exception vì thanh toán đã thành công
             }
@@ -490,7 +542,7 @@ public class BookingServiceImpl implements BookingService {
     /**
      * Xử lý thanh toán thất bại
      */
-    private boolean handleFailedPayment(Booking booking, String responseCode) {
+    public boolean handleFailedPayment(Booking booking, String responseCode) {
         try {
             // Cập nhật trạng thái booking
             booking.setPaymentStatus(Booking.PaymentStatus.cancelled);
@@ -512,6 +564,18 @@ public class BookingServiceImpl implements BookingService {
             // Hoàn lại usage count của promotion nếu có
             rollbackPromotionUsage(booking);
 
+            // ✅ Lưu bản ghi Payment thất bại
+            Payment payment = Payment.builder()
+                    .booking(booking)
+                    .paymentAmount(booking.getTotalAmount())
+                    .paymentMethod(booking.getPaymentMethod())
+                    .transactionId("VNPAY_" + booking.getBookingCode())
+                    .status(Payment.Status.failed)
+                    .paymentDetails("{\"gateway\": \"VNPAY\", \"responseCode\": \"" + responseCode + "\"}")
+                    .build();
+
+            paymentRepository.save(payment);
+
             log.info("Payment failed for booking: {} with response code: {}", booking.getBookingCode(), responseCode);
             return false;
 
@@ -524,7 +588,7 @@ public class BookingServiceImpl implements BookingService {
     /**
      * Hoàn lại usage count của promotion
      */
-    private void rollbackPromotionUsage(Booking booking) {
+    public void rollbackPromotionUsage(Booking booking) {
         try {
             List<BookingPromotion> bookingPromotions = bookingPromotionRepository.findByBookingBookingId(booking.getBookingId());
 
@@ -564,8 +628,9 @@ public class BookingServiceImpl implements BookingService {
             scheduleEmailRetry(booking, retryCount + 1);
         }
     }
+
     // Update notification khi email cuối cùng thành công
-    private void updateNotificationWithEmailSuccess(Booking booking) {
+    public void updateNotificationWithEmailSuccess(Booking booking) {
         try {
             // Tìm notification của booking này
             List<Notification> notifications = notificationRepository
@@ -584,14 +649,15 @@ public class BookingServiceImpl implements BookingService {
             log.warn("Failed to update notification with email success", e);
         }
     }
+
     /**
      * Gửi email xác nhận booking
      */
-    private void sendBookingConfirmationEmail(Booking booking) throws MessagingException {
+    public void sendBookingConfirmationEmail(Booking booking) throws MessagingException {
 
         CompletableFuture.runAsync(() -> {
             try {
-                if (booking.getUser() != null && booking.getUser().getEmail() != null) {
+                if (booking.getContactEmail() != null) {
 
                     // Lấy thông tin tickets
                     List<Ticket> tickets = ticketRepository.findByBookingBookingId(booking.getBookingId());
@@ -609,6 +675,7 @@ public class BookingServiceImpl implements BookingService {
                 emailService.createSuccessNotification(booking);
             } catch (Exception e) {
                 log.warn("Failed to send confirmation email for booking: {}", booking.getBookingCode(), e);
+                e.printStackTrace();
                 emailService.createEmailFailureNotification(booking);
                 scheduleEmailRetry(booking, 1);
             }

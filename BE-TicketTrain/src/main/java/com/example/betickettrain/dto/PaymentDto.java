@@ -26,4 +26,10 @@ public class PaymentDto implements Serializable {
     String paymentDetails;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
+    public PaymentDto(String method, String status, String transactionId, LocalDateTime paidAt) {
+        this.paymentMethod = Booking.PaymentMethod.valueOf(method);
+        this.status = Payment.Status.valueOf(status);
+        this.transactionId = transactionId;
+        this.createdAt = paidAt;
+    }
 }

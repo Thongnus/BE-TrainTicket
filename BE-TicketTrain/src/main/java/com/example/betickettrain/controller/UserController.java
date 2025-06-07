@@ -1,6 +1,8 @@
 package com.example.betickettrain.controller;
 
+import com.example.betickettrain.dto.Response;
 import com.example.betickettrain.dto.UserDto;
+import com.example.betickettrain.entity.User;
 import com.example.betickettrain.service.ServiceImpl.UserServiceimp;
 import com.example.betickettrain.service.UserService;
 import com.example.betickettrain.util.Constants;
@@ -11,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -53,7 +56,17 @@ public class UserController {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
-
+    @GetMapping("/me")
+    public ResponseEntity<UserDto> getMyProfile(@AuthenticationPrincipal User user) {
+        Long id = user.getUserId();
+        return ResponseEntity.ok(userService.findUserById(id));
+    }
+    @PutMapping("/update")
+    public Response<?> updateProfile(@Valid @RequestBody UserDto userDto,
+                                     @AuthenticationPrincipal User userDetails) {
+        String username = userDetails.getUsername();
+        return new Response<>(userService.update(userDto, username));
+    }
     @PatchMapping("/status/{id}")
     public ResponseEntity<UserDto> toggleUserStatus(@PathVariable Long id, @RequestBody String statusUpdate) {
         UserDto updatedUser = userService.toggleStatus(id,statusUpdate );

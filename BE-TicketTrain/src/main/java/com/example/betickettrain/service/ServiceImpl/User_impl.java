@@ -5,6 +5,8 @@ import com.example.betickettrain.dto.SignupRequest;
 import com.example.betickettrain.dto.UserDto;
 import com.example.betickettrain.entity.Role;
 import com.example.betickettrain.entity.User;
+import com.example.betickettrain.exceptions.ErrorCode;
+import com.example.betickettrain.exceptions.UserNotFoundException;
 import com.example.betickettrain.mapper.UserMapper;
 import com.example.betickettrain.repository.RoleRepository;
 import com.example.betickettrain.repository.UserRepository;
@@ -31,13 +33,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Service
 public class User_impl implements UserService {
+    private final PasswordEncoder passwordEncoder;
     UserRepository userRepository;
     @Autowired
     UserMapper userMapper;
     @Autowired
     RoleRepository role_Reponsitory;
-
-    private final  PasswordEncoder passwordEncoder;
 
     @Autowired
     public User_impl(UserRepository userReponsitory, PasswordEncoder passwordEncoder) {
@@ -51,6 +52,7 @@ public class User_impl implements UserService {
         return userRepository.findByUsername(name);
 
     }
+
     @Transactional
     //cần lưu ý
     @Override
@@ -106,22 +108,52 @@ public class User_impl implements UserService {
 
     @Override
     public User updatepassword(User user) {
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        String encodedPassword = encoder.encode(user.getPassword());
+
+        String encodedPassword = passwordEncoder.encode(user.getPassword());
         user.setPassword(encodedPassword);
         return userRepository.save(user);
     }
 
     @Override
-    @LogAction(action = Constants.Action.UPDATE, entity = "User", description = " Update a user")
-    public User update(User user) {
+    @LogAction(action = Constants.Action.UPDATE, entity = "User", description = "Update a user")
+    public User update(UserDto userDto, String username) {
+        // Tìm user hiện tại bằng username
+        User existingUser = userRepository.findByUsername(username);
+        if (existingUser == null) {
+            throw new UserNotFoundException("USER_NOT_FOUND",ErrorCode.USER_NOT_FOUND.message);
+        }
+//        if(userDto.getUsername() != null && userRepository.existsUserByUsername(userDto.getUsername())) {
+//            throw new UserNotFoundException("USER_ALREADY",ErrorCode.USERNAME_ALREADY.message);
+//        }
+    //    userDto.setUsername(userDto.getUsername());
 
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        String encodedPassword = encoder.encode(user.getPassword());
+        // Cập nhật thông tin (chỉ update field không null)
+        if (userDto.getFullName() != null) {
+            existingUser.setFullName(userDto.getFullName());
+        }
+        if (userDto.getEmail() != null) {
+            existingUser.setEmail(userDto.getEmail());
+        }
+        if (userDto.getPhone() != null) {
+            existingUser.setPhone(userDto.getPhone());
+        }
+        if (userDto.getAddress() != null) {
+            existingUser.setAddress(userDto.getAddress());
+        }
+        if(userDto.getIdCard() != null) {
+            existingUser.setIdCard(userDto.getIdCard());
+        }
+        if(userDto.getDateOfBirth() != null) {
+            existingUser.setDateOfBirth(userDto.getDateOfBirth());
+        }
+        // Chỉ update password nếu có
+        if (userDto.getPassword() != null && !userDto.getPassword().isEmpty()) {
+            BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+            String encodedPassword = encoder.encode(userDto.getPassword());
+            existingUser.setPassword(encodedPassword);
+        }
 
-        user.setPassword(encodedPassword);
-        System.out.println(encodedPassword);
-        return userRepository.save(user);
+        return userRepository.save(existingUser);
     }
 
     @Override
@@ -136,7 +168,7 @@ public class User_impl implements UserService {
 
         // Default role
         if (requestedRoles == null || requestedRoles.isEmpty()) {
-            Role userRole = role_Reponsitory.findByName(Constants.Role.ROLE_CUSTOMER);
+            Role userRole = role_Reponsitory.findByName(Constants.Role.ROLE_USER);
             if (userRole == null) throw new RoleNotFoundException("Role CUSTOMER not found");
             roles.add(userRole);
         }

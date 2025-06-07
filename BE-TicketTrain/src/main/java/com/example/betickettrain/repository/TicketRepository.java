@@ -1,7 +1,9 @@
 package com.example.betickettrain.repository;
 
+import com.example.betickettrain.dto.PassengerTicketDto;
 import com.example.betickettrain.entity.Ticket;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDateTime;
 import java.util.List;

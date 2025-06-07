@@ -3,9 +3,13 @@ package com.example.betickettrain.service.ServiceImpl;
 import com.example.betickettrain.dto.JwtResponse;
 import com.example.betickettrain.dto.LoginRequest;
 import com.example.betickettrain.entity.User;
+import com.example.betickettrain.exceptions.AccountDeactivatedException;
+import com.example.betickettrain.exceptions.InvalidCredentialsException;
+import com.example.betickettrain.exceptions.UserNotFoundException;
 import com.example.betickettrain.security.JwtService;
 import com.example.betickettrain.service.TokenBlacklistService;
 import com.example.betickettrain.service.UserService;
+import com.example.betickettrain.util.Constants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -13,6 +17,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,46 +33,51 @@ public class AuthService {
     // Login Business Logic
     public JwtResponse login(LoginRequest loginRequest) {
         log.info("Processing login for user: {}", loginRequest.getUsername());
-        
+
         try {
             // Authenticate user
             Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    loginRequest.getUsername(), 
-                    loginRequest.getPassword()
-                )
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getUsername(),
+                            loginRequest.getPassword()
+                    )
             );
-            
+
             SecurityContextHolder.getContext().setAuthentication(authentication);
             User user = (User) authentication.getPrincipal();
-            
+            // ✅ Kiểm tra active status với custom exception
+            if (!Constants.User.STATUS_ACTIVE.equals(user.getStatus())) {
+                log.warn("Inactive user attempted to login: {}", user.getUsername());
+                throw new AccountDeactivatedException("Account is deactivated. Please contact administrator.");
+            }
+
             // Generate tokens
             String accessToken = jwtService.generateToken(user);
             String refreshToken = jwtService.generateRefreshToken(user);
-            
+
             // Store refresh token
             tokenBlacklistService.storeRefreshToken(user.getUsername(), refreshToken);
-            
+
             // Log successful login
             log.info("User {} logged in successfully", user.getUsername());
-            
+
             return new JwtResponse(
-                accessToken, 
-                refreshToken, 
-                user.getUserId(), 
-                user.getUsername(), 
-                user.getAuthorities()
+                    accessToken,
+                    refreshToken,
+                    user.getUserId(),
+                    user.getUsername(),
+                    user.getAuthorities()
             );
-            
+
         } catch (BadCredentialsException e) {
             log.warn("Invalid credentials for user: {}", loginRequest.getUsername());
-            throw new RuntimeException("Invalid username or password");
-        } catch (Exception e) {
-            log.error("Login error for user {}: {}", loginRequest.getUsername(), e.getMessage());
-            throw new RuntimeException("Login failed");
+            throw new InvalidCredentialsException("Invalid username or password");
+        } catch (UsernameNotFoundException e) {
+            log.warn("User not found: {}", loginRequest.getUsername());
+            throw new UserNotFoundException("USER_NOT_FOUND","User not found: " + loginRequest.getUsername());
         }
+        // Không cần catch Exception nữa, để GlobalExceptionHandler xử lý
     }
-    
     // Refresh Token Business Logic
     public JwtResponse refreshToken(String refreshToken) {
         log.info("Processing refresh token request");
@@ -117,7 +127,7 @@ public class AuthService {
             if (accessToken != null) {
                 tokenBlacklistService.blacklistAccessToken(accessToken);
             }
-            
+
             // Blacklist refresh token
             if (refreshToken != null) {
                 tokenBlacklistService.blacklistRefreshToken(refreshToken, username);

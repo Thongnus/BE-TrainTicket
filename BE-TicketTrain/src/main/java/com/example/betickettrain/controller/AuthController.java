@@ -16,6 +16,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,14 +25,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.management.relation.RoleNotFoundException;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Authentication", description = "Authentication API endpoints")
-@CrossOrigin(origins = "*", maxAge = 3600)
-
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final UserServiceimp userService;
@@ -46,11 +47,26 @@ public class AuthController {
         try {
             JwtResponse response = authService.login(loginRequest);
             return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("deactivated")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("code", "ACCOUNT_LOCKED", "message", e.getMessage()));
+            } else if (e.getMessage().contains("Invalid username or password")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("code", "INVALID_CREDENTIALS", "message", e.getMessage()));
+            } else if (e.getMessage().contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("code", "USER_NOT_FOUND", "message", e.getMessage()));
+            }
+
+            return ResponseEntity.badRequest()
+                    .body(Map.of("code", "LOGIN_FAILED", "message", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("code", "SERVER_ERROR", "message", "Internal server error"));
         }
     }
-
     @Operation(summary = "User registration", description = "Register a new user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User registered successfully"),

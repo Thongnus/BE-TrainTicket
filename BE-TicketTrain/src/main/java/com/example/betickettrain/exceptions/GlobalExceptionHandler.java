@@ -13,7 +13,6 @@ import java.util.List;
 
 @Slf4j
 @RestControllerAdvice
-
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -25,23 +24,36 @@ public class GlobalExceptionHandler {
                 ex.getMessage()
         );
     }
-//    @ExceptionHandler(ValidationException.class)
-//    @ResponseStatus(HttpStatus.BAD_REQUEST)
-//    public Response<Void> handleValidationException(ValidationException ex) {
-//        return Response.error(
-//                HttpStatus.BAD_REQUEST.value(),
-//                "VALIDATION_ERROR",
-//                ex.getMessage()
-//        );
-//    }
 
-    @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public Response<Void> handleGenericException(Exception ex) {
-        log.error("Unhandled exception", ex);
+    @ExceptionHandler(AccountDeactivatedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Response<Void> handleAccountDeactivatedException(AccountDeactivatedException ex) {
+        log.warn("Account deactivated: {}", ex.getMessage());
         return Response.error(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "INTERNAL_ERROR",
+                HttpStatus.FORBIDDEN.value(),
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public Response<Void> handleInvalidCredentialsException(InvalidCredentialsException ex) {
+        log.warn("Invalid credentials: {}", ex.getMessage());
+        return Response.error(
+                HttpStatus.UNAUTHORIZED.value(),
+                ex.getCode(),
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Response<Void> handleUserNotFoundException(UserNotFoundException ex) {
+        log.warn("User not found: {}", ex.getMessage());
+        return Response.error(
+                HttpStatus.NOT_FOUND.value(),
+                ex.getCode(),
                 ex.getMessage()
         );
     }
@@ -55,8 +67,19 @@ public class GlobalExceptionHandler {
                 status.value(),
                 ex.getCode(),
                 ex.getMessage(),
-                ex.getLockedSeats() // Trả về danh sách ghế bị khóa
+                ex.getLockedSeats()
         );
         return new ResponseEntity<>(response, status);
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public Response<Void> handleGenericException(Exception ex) {
+        log.error("Unhandled exception", ex);
+        return Response.error(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "INTERNAL_ERROR",
+                "An unexpected error occurred"
+        );
     }
 }

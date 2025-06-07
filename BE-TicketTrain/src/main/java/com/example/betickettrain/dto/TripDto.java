@@ -26,5 +26,13 @@ public class TripDto implements Serializable {
     Integer delayMinutes;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
-
+     String origin;
+     String destination;
+    public TripDto(String trainNumber, LocalDateTime departureTime, LocalDateTime arrivalTime, String origin, String destination) {
+        this.train.trainNumber = trainNumber;
+        this.departureTime = departureTime;
+        this.arrivalTime = arrivalTime;
+        this.origin = origin;
+        this.destination = destination;
+    }
 }

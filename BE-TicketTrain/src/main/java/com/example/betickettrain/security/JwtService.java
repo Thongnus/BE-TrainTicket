@@ -22,10 +22,10 @@ public class JwtService {
     @Value("${jwt.refresh-secret:defaultRefreshSecretKey}")
     private String refreshSecretKeyString;
 
-    @Value("${jwt.access-token-expiration:60000}")
+    @Value("${jwt.access-token-expiration}")
     private long accessTokenExpiration; // 1 phút (mặc định)
 
-    @Value("${jwt.refresh-token-expiration:300000}")
+    @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpiration; // 5 phút (mặc định)
 
     private SecretKey getAccessSecretKey() {

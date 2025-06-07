@@ -1,6 +1,7 @@
 package com.example.betickettrain.service;
 
 import com.example.betickettrain.security.JwtService;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -41,24 +42,30 @@ public class TokenBlacklistService {
     // Blacklist refresh token
     public void blacklistRefreshToken(String refreshToken, String username) {
         try {
-            if (refreshToken != null) {
-                // Blacklist refresh token
-                Date expiration = jwtService.extractExpiration(refreshToken);
-                long timeToExpire = expiration.getTime() - System.currentTimeMillis();
-                
-                if (timeToExpire > 0) {
-                    String blacklistKey = BLACKLIST_PREFIX + refreshToken;
-                    redisTemplate.opsForValue().set(blacklistKey, "blacklisted", Duration.ofMillis(timeToExpire));
-                }
-                
-                // Remove from active refresh tokens
+            if (refreshToken != null && !refreshToken.trim().isEmpty()) {
+
+                // Luôn luôn xóa refresh token khỏi Redis trước
                 String refreshKey = REFRESH_TOKEN_PREFIX + username;
                 redisTemplate.delete(refreshKey);
-                
-                log.info("Refresh token blacklisted for user: {}", username);
+
+                // Chỉ blacklist nếu token còn valid
+                try {
+                    Date expiration = jwtService.extractExpiration(refreshToken);
+                    long timeToExpire = expiration.getTime() - System.currentTimeMillis();
+
+                    if (timeToExpire > 0) {
+                        String blacklistKey = BLACKLIST_PREFIX + refreshToken;
+                        redisTemplate.opsForValue().set(blacklistKey, "blacklisted", Duration.ofMillis(timeToExpire));
+                    }
+                } catch (JwtException jwtEx) {
+                    // Token invalid, không cần blacklist, chỉ log
+                    log.info("Refresh token invalid/expired for user: {}", username);
+                }
+
+                log.info("Refresh token cleanup completed for user: {}", username);
             }
         } catch (Exception e) {
-            log.error("Error blacklisting refresh token: {}", e.getMessage());
+            log.error("Error in refresh token cleanup: {}", e.getMessage());
         }
     }
     

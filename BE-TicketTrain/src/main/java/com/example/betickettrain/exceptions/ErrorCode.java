@@ -1,7 +1,8 @@
 package com.example.betickettrain.exceptions;
 
 public enum ErrorCode {
-
+    USER_NOT_FOUND("U01","User Not Found"),
+    USERNAME_ALREADY("U02","Username Already Exist"),
     PAYMENT_METHOD_NOT_ALLOWED("A01", "Payment method not allowed"),
     RESOURCE_NOT_FOUND("A02", "Resource not found"),
     TRAIN_NOT_FOUND("A03", "Train not found"),

@@ -61,6 +61,12 @@ public class Booking {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "contact_email", nullable = false)
+    private String contactEmail;
+
+    @Column(name = "contact_phone", nullable = false)
+    private String contactPhone;
+
     public enum PaymentStatus {
         pending, paid, refunded, cancelled
     }

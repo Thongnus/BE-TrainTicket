@@ -23,7 +23,7 @@ public interface UserService {
 
     User updatepassword(User u);
 
-    User update(User user);
+    User update(UserDto user, String username);
 
     User updatenopassword(User user);
 
