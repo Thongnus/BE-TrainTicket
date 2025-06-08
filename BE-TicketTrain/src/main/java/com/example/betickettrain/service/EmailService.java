@@ -1,7 +1,9 @@
 package com.example.betickettrain.service;
 
+import com.example.betickettrain.dto.BookingDto;
 import com.example.betickettrain.entity.Booking;
 import jakarta.mail.MessagingException;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 
 public interface EmailService {
@@ -11,14 +13,16 @@ public interface EmailService {
 
 
 
-    void createSuccessNotification(Booking booking);
+    void createSuccessNotification(BookingDto booking);
 
     // Tạo notification backup khi email fail
-    void createEmailFailureNotification(Booking booking);
+    void createEmailFailureNotification(BookingDto booking);
 
     // Tạo notification cho trường hợp fail hoàn toàn
 
-    void createPermanentFailureNotification(Booking booking);
+    void createPermanentFailureNotification(BookingDto booking);
 
-    void notifyAdminEmailFailure(Booking booking);
+    void notifyAdminEmailFailure(BookingDto booking);
+
+    void sendEmailWithQRCode( String to, String subject, String text, byte[] qrCodeBytes) throws MessagingException;
 }

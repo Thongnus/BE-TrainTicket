@@ -13,9 +13,9 @@ import java.time.LocalDateTime;
  * DTO for {@link com.example.betickettrain.entity.Seat}
  */
 @Data
-@NoArgsConstructor // ✅ BẮT BUỘC CHO JACKSON
+@NoArgsConstructor //
 @AllArgsConstructor
-public class SeatDto implements Serializable {
+public class SeatDto   {
     Integer seatId;
     String seatNumber;
     Seat.SeatType seatType;
@@ -24,4 +24,5 @@ public class SeatDto implements Serializable {
     LocalDateTime updatedAt;
     Double price;
     boolean booked; // true if already booked
+    private CarriageDto carriage;
 }

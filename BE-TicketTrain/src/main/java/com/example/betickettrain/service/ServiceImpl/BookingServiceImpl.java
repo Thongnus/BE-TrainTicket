@@ -12,6 +12,7 @@ import com.example.betickettrain.service.BookingService;
 import com.example.betickettrain.service.EmailService;
 import com.example.betickettrain.service.RedisSeatLockService;
 import com.example.betickettrain.util.DateUtils;
+import com.example.betickettrain.util.TemplateMail;
 import jakarta.mail.MessagingException;
 import jakarta.persistence.criteria.Predicate;
 import lombok.AllArgsConstructor;
@@ -24,6 +25,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.awt.image.BufferedImage;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -32,6 +34,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+
+import static com.example.betickettrain.util.QrCodeGenerator.bufferedImageToByteArray;
+import static com.example.betickettrain.util.QrCodeGenerator.generateQRCodeImage;
 
 @Service
 @AllArgsConstructor
@@ -55,33 +60,7 @@ public class BookingServiceImpl implements BookingService {
     private final NotificationRepository notificationRepository;
     private final PaymentRepository paymentRepository;
 
-    private static String buildEmailContent(Booking booking, List<Ticket> tickets) {
-        StringBuilder content = new StringBuilder();
-        content.append("Kính chào Quý Khách hàng  \n ");
-        content.append("Cảm ơn bạn đã sử dụng dịch vụ đặt vé tàu của chúng tôi.\n");
-        content.append("Thông tin đặt vé của bạn:\n\n");
-        content.append("Mã booking: ").append(booking.getBookingCode()).append("\n");
-        content.append("Ngày đặt: ").append(booking.getBookingDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))).append("\n");
-        content.append("Tổng tiền: ").append(String.format("%,.0f VNĐ", booking.getTotalAmount())).append("\n");
-        content.append("Trạng thái: Đã thanh toán\n\n");
 
-        content.append("Chi tiết vé:\n");
-        for (Ticket ticket : tickets) {
-            content.append("- Hành khách: ").append(ticket.getPassengerName()).append("\n");
-            content.append("  Chuyến: ").append(ticket.getTrip().getTripCode()).append("\n");
-            content.append("  Tàu: ").append(ticket.getTrip().getTrain().getTrainNumber()).append("\n");
-            content.append("  Ghế: ").append(ticket.getSeat().getSeatNumber()).append("\n");
-            content.append("  Toa: ").append(ticket.getSeat().getCarriage().getCarriageNumber()).append("\n");
-            content.append("  Giá vé: ").append(String.format("%,.0f VNĐ", ticket.getTicketPrice())).append("\n");
-            content.append("  Mã vé: ").append(ticket.getTicketCode()).append("\n\n");
-        }
-
-        content.append("Vui lòng lưu lại email này để làm thủ tục lên tàu.\n");
-        content.append("Trân trọng,\n");
-        content.append("Đội ngũ hỗ trợ khách hàng");
-
-        return content.toString();
-    }
 
     // chưa hoàn thiện vẫn chưa fix dc race condition
     @Override
@@ -272,7 +251,8 @@ public class BookingServiceImpl implements BookingService {
         return total;
     }
 
-    @Transactional
+    // chưa tối ưu vì nêu cập nhật db fail thì exception dù user đã thanh toán . Để sau update thêm (*)
+    //@Transactional
     @Override
     public boolean handleVnPayCallback(String bookingCode, String responseCode) {
         try {
@@ -295,6 +275,7 @@ public class BookingServiceImpl implements BookingService {
             }
 
         } catch (Exception e) {
+            e.printStackTrace();
             log.error("Error handling VnPay callback for booking: {}", bookingCode, e);
             return false;
         }
@@ -324,6 +305,7 @@ public class BookingServiceImpl implements BookingService {
         return bookingRepository.findAll(spec, pageable).map(bookingMapper::toDto);
     }
 
+    //chua toi uu
     @Override
     public List<BookingHistoryDTO> getBookingHistorybyUser(Long userId) {
 
@@ -356,8 +338,8 @@ public class BookingServiceImpl implements BookingService {
      * Tính giá vé dựa trên route, seat và trip
      */
 //    private double calculateTicketPrice(Route route, Seat seat, Trip trip) {
-//        // Lấy carriage type từ seat
-//        Carriage.CarriageType carriageType = seat.getCarriage().getCarriageType();
+    //        // Lấy carriage type từ seat
+    //        Carriage.CarriageType carriageType = seat.getCarriage().getCarriageType();
 //
 //        // Lấy giá cơ bản từ bảng ticket_prices theo route và carriage type
 //        TicketPrice ticketPrice = ticketPriceRepository
@@ -605,7 +587,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Async
-    public void scheduleEmailRetry(Booking booking, int retryCount) {
+    public void scheduleEmailRetry(BookingDto booking, int retryCount) {
         if (retryCount > 3) {
             log.error("All email retries failed for booking: {}", booking.getBookingCode());
             emailService.createPermanentFailureNotification(booking);
@@ -617,7 +599,7 @@ public class BookingServiceImpl implements BookingService {
             int delayMinutes = retryCount == 1 ? 1 : retryCount == 2 ? 5 : 15;
             Thread.sleep(delayMinutes * 60 * 1000);
 
-            sendBookingConfirmationEmail(booking);
+            sendBookingConfirmationEmail(bookingMapper.toEntity(booking));
             log.info("Email retry {} successful for booking: {}", retryCount, booking.getBookingCode());
 
             // Update notification về việc gửi email thành công
@@ -630,7 +612,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     // Update notification khi email cuối cùng thành công
-    public void updateNotificationWithEmailSuccess(Booking booking) {
+    public void updateNotificationWithEmailSuccess(BookingDto booking) {
         try {
             // Tìm notification của booking này
             List<Notification> notifications = notificationRepository
@@ -655,32 +637,35 @@ public class BookingServiceImpl implements BookingService {
      */
     public void sendBookingConfirmationEmail(Booking booking) throws MessagingException {
 
+        // Truy xuất đầy đủ dữ liệu cần trước khi vào thread mới
+        List<TicketDto> tickets = ticketRepository.findByBookingBookingId(booking.getBookingId())
+                .stream().map(ticketMapper::toDto).collect(Collectors.toList());
+
+        BookingDto bookingDto = bookingMapper.toDto(booking);
+        String bookingCode = booking.getBookingCode(); // sẵn booking code
+//        String userEmail = booking.getUser().getEmail(); // load ra luôn từ main thread
+        String userEmail = booking.getContactEmail().trim(); // load ra luôn từ main thread
         CompletableFuture.runAsync(() -> {
             try {
-                if (booking.getContactEmail() != null) {
-
-                    // Lấy thông tin tickets
-                    List<Ticket> tickets = ticketRepository.findByBookingBookingId(booking.getBookingId());
-
-                    // Tạo email content
-                    String emailSubject = "Xác nhận đặt vé tàu - Mã booking: " + booking.getBookingCode();
-                    String emailContent = buildEmailContent(booking, tickets);
-
-                    // Gửi email (cần implement emailService)
-                    emailService.sendEmail(booking.getUser().getEmail(), emailSubject, emailContent);
-
-
+                if (bookingDto.getContactEmail() != null) {
+                    String subject = "Xác nhận đặt vé tàu - Mã booking: " + bookingCode;
+                //    String emailContent = buildEmailContent(bookingDto, tickets);
+                            String emailContent = TemplateMail.buildEmailHtmlContent(bookingDto,tickets);
+                    //test send mail with qr
+                    BufferedImage qrImage = generateQRCodeImage(booking.getBookingCode());
+                    byte[] qrBytes = bufferedImageToByteArray(qrImage, "PNG");
+                    emailService.sendEmailWithQRCode(booking.getContactEmail(), "Thông tin vé tàu của bạn", emailContent, qrBytes);
+                    //   emailService.sendEmail(userEmail, subject, emailContent);
+                    log.info("Confirmation email sent successfully for booking: {}", bookingCode);
+                    emailService.createSuccessNotification(bookingDto); // truyền DTO nếu cần
                 }
-                log.info("Confirmation email sent successfully for booking: {}", booking.getBookingCode());
-                emailService.createSuccessNotification(booking);
             } catch (Exception e) {
-                log.warn("Failed to send confirmation email for booking: {}", booking.getBookingCode(), e);
+                log.warn("Failed to send confirmation email for booking: {}", bookingCode, e);
                 e.printStackTrace();
-                emailService.createEmailFailureNotification(booking);
-                scheduleEmailRetry(booking, 1);
+                emailService.createEmailFailureNotification(bookingDto); // truyền DTO nếu cần
+                scheduleEmailRetry(bookingDto, 1);
             }
         });
-
     }
 
     /**

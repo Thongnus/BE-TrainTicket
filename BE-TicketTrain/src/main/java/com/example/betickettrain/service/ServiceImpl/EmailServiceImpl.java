@@ -1,13 +1,15 @@
 package com.example.betickettrain.service.ServiceImpl;
 
-import com.example.betickettrain.entity.Booking;
+import com.example.betickettrain.dto.BookingDto;
 import com.example.betickettrain.entity.Notification;
+import com.example.betickettrain.mapper.UserMapper;
 import com.example.betickettrain.repository.NotificationRepository;
 import com.example.betickettrain.service.EmailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,8 @@ import java.time.format.DateTimeFormatter;
 @Service
 @Slf4j
 public class EmailServiceImpl implements EmailService {
+    @Autowired
+    private UserMapper userMapper;
 
     @Autowired
     private JavaMailSender mailSender;
@@ -44,10 +48,10 @@ public class EmailServiceImpl implements EmailService {
 
 
     @Override
-    public void createSuccessNotification(Booking booking) {
+    public void createSuccessNotification(BookingDto booking) {
         try {
             Notification notification = new Notification();
-            notification.setUser(booking.getUser());
+            notification.setUser(userMapper.toEntity(booking.getUser()));
             notification.setTitle("Xác nhận đặt vé thành công");
             notification.setMessage("Email xác nhận đặt vé " + booking.getBookingCode() + " đã được gửi đến địa chỉ email của bạn.");
             notification.setNotificationType(Notification.NotificationType.booking);
@@ -65,10 +69,10 @@ public class EmailServiceImpl implements EmailService {
      */
     // Tạo notification backup khi email fail
     @Override
-    public void createEmailFailureNotification(Booking booking) {
+    public void createEmailFailureNotification(BookingDto booking) {
         try {
             Notification notification = new Notification();
-            notification.setUser(booking.getUser());
+            notification.setUser(userMapper.toEntity(booking.getUser()));
             notification.setTitle("Đặt vé thành công - " + booking.getBookingCode());
             notification.setMessage(String.format(
                     "Chúc mừng! Bạn đã đặt vé thành công.\n" +
@@ -91,10 +95,10 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public void createPermanentFailureNotification(Booking booking) {
+    public void createPermanentFailureNotification(BookingDto booking) {
         try {
             Notification notification = new Notification();
-            notification.setUser(booking.getUser());
+            notification.setUser(userMapper.toEntity(booking.getUser()));
             notification.setTitle("Thông tin đặt vé - " + booking.getBookingCode());
             notification.setMessage(String.format(
                     "Đặt vé của bạn đã thành công!\n" +
@@ -119,7 +123,7 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public void notifyAdminEmailFailure(Booking booking) {
+    public void notifyAdminEmailFailure(BookingDto booking) {
         try {
             log.error("ADMIN ALERT: Email confirmation failed permanently for booking: {}",
                     booking.getBookingCode());
@@ -128,4 +132,27 @@ public class EmailServiceImpl implements EmailService {
             log.error("Failed to notify admin about email failure", e);
         }
     }
+
+
+@Override
+public void sendEmailWithQRCode( String to, String subject, String text, byte[] qrCodeBytes) throws MessagingException {
+
+
+
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+        helper.setTo(to);
+        helper.setSubject(subject);
+
+        // Nội dung email dạng HTML có nhúng ảnh
+        String htmlContent = text + "<br><img src='cid:qrCodeImage'/>";
+        helper.setText(htmlContent, true);
+
+        // Đính kèm ảnh QR code inline với Content-ID = qrCodeImage
+        helper.addInline("qrCodeImage", new ByteArrayResource(qrCodeBytes), "image/png");
+
+        mailSender.send(message);
+    }
+
 }
