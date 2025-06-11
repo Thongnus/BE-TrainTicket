@@ -3,6 +3,7 @@ package com.example.betickettrain.anotation;
 import com.example.betickettrain.entity.SystemLog;
 import com.example.betickettrain.entity.User;
 import com.example.betickettrain.repository.SystemLogRepository;
+import com.example.betickettrain.service.SystemLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,7 @@ import org.aspectj.lang.reflect.CodeSignature;
 import org.springframework.expression.common.TemplateParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -27,6 +29,7 @@ public class SystemLogAspect {
 
     private final HttpServletRequest request;
     private final SystemLogRepository systemLogRepository;
+    private final SystemLogService systemLogService;
 
     @AfterReturning(pointcut = "@annotation(logAction)", returning = "result")
     public void logAction(JoinPoint joinPoint, LogAction logAction, Object result) {
@@ -51,6 +54,9 @@ public class SystemLogAspect {
 
             systemLogRepository.save(logg);
             log.debug("📘 Logged [{}] [{}:{}] - {}", logAction.action(), logAction.entity(), entityId, desString);
+            systemLogService.logAction(logg);
+            log.debug("📘 Sent log to WebSocket: {}", logg);
+
         } catch (Exception e) {
             log.warn("⚠️ Failed to log action: {}", e.getMessage());
         }

@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Data
-
 public class VnPayProperties {
     @Value("${vnPay.tmnCode}")
     private String tmnCode;

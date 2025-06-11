@@ -29,7 +29,7 @@ public class PaymentCallbackController {
         if (!vnpayService.validateSignature(request)) {
             // Redirect về FE với lỗi
             return ResponseEntity.status(302)
-                    .header("Location", "https://your-frontend.com/payment-return?success=false&message=Invalid signature")
+                    .header("Location", "http:localhost:3000/payment-return?success=false&message=Invalid signature")
                     .build();
         }
 

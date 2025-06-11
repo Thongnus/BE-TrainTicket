@@ -4,6 +4,7 @@ import com.example.betickettrain.configuration.AuthEntryPointJwt;
 import com.example.betickettrain.configuration.JwtAuthenticationFilter;
 import com.example.betickettrain.service.UserService;
 import com.example.betickettrain.service.ServiceImpl.UserServiceimp;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -55,6 +56,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/test/all").permitAll()
+                        .requestMatchers("/ws/system-log").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
                                 "/swagger-resources/**", "/webjars/**", "/swagger-ui/index.html",
                                 "/v3/api-docs.yaml", "/configuration/**",   "/api/payment/vnpay/callback").permitAll()
