@@ -5,6 +5,7 @@ import com.example.betickettrain.dto.TrainRouteProjection;
 import com.example.betickettrain.entity.Trip;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.query.Procedure;
 
@@ -75,4 +76,22 @@ public interface TripRepository extends JpaRepository<Trip, Integer> {
             
             """)
     List<TrainRouteProjection> findPopularRoutes(@Param("limit") Integer limit);
+    @Query("SELECT COUNT(t) FROM Trip t WHERE t.status = 'active'")
+    int countActiveTrips();
+
+    @Query("SELECT COUNT(t) FROM Trip t WHERE t.status = 'active' AND t.departureTime BETWEEN :start AND :end")
+    int countActiveTripsBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+
+    //Update trips to completed if they are scheduled and expired
+    @Modifying
+    @Query(value = """
+    UPDATE trips 
+    SET status = 'completed' 
+    WHERE status = 'scheduled' 
+      AND arrival_time < :expiredBefore
+""", nativeQuery = true)
+    int markTripsCompletedIfExpired(@Param("expiredBefore") LocalDateTime expiredBefore);
+
+
 }

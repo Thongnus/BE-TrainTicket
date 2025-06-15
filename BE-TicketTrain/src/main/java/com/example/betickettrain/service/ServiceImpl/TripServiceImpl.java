@@ -194,4 +194,17 @@ public class TripServiceImpl implements TripService  {
         tripScheduleRepository.saveAll(schedules);
     }
 
+    @Transactional
+    @Override
+    public void markTripDelayed(Integer tripId) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chuyến tàu"));
+
+        if (!trip.getStatus().equals(Trip.Status.scheduled)) {
+            throw new IllegalStateException("Chỉ chuyến scheduled mới được đánh dấu trễ");
+        }
+
+        trip.setStatus(Trip.Status.delayed);
+        tripRepository.save(trip);
+    }
 }

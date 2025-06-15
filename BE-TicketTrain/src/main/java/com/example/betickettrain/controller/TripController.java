@@ -108,4 +108,10 @@ public class TripController {
     ) {
         tripTrackingService.markStationDeparted(tripId, stationId, actualDeparture);
     }
+
+    @PostMapping("/{tripId}/delay")
+    public ResponseEntity<String> markDelayed(@PathVariable Integer tripId) {
+        tripService.markTripDelayed(tripId);
+        return ResponseEntity.ok("Chuyến đã được đánh dấu là trễ.");
+    }
 }

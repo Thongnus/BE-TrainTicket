@@ -30,7 +30,7 @@ public class SystemLogAspect {
     private final HttpServletRequest request;
     private final SystemLogRepository systemLogRepository;
     private final SystemLogService systemLogService;
-
+        // chưa tối ưu , bổ sung sau (*)
     @AfterReturning(pointcut = "@annotation(logAction)", returning = "result")
     public void logAction(JoinPoint joinPoint, LogAction logAction, Object result) {
         try {
@@ -62,7 +62,7 @@ public class SystemLogAspect {
         }
     }
 
-    private Long getCurrentUserId() {
+    public static Long getCurrentUserId() {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth != null && auth.getPrincipal() instanceof User details) {

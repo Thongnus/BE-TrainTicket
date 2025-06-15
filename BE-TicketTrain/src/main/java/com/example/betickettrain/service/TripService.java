@@ -7,6 +7,7 @@ import com.example.betickettrain.dto.TripSearchResult;
 import com.example.betickettrain.entity.Trip;
 import org.springframework.data.jpa.repository.query.Procedure;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -27,4 +28,7 @@ public interface TripService {
             Integer passengers);
 
     List<TrainRouteDto> findPopularRoutes(int limit);
+
+    @Transactional
+    void markTripDelayed(Integer tripId);
 }
