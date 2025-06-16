@@ -1,6 +1,7 @@
 package com.example.betickettrain.dto;
 
 import com.example.betickettrain.entity.Station;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 
 import java.io.Serializable;
@@ -21,6 +22,8 @@ public class StationDto implements Serializable {
     String province;
     String phone;
     Station.Status status;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime updatedAt;
 }

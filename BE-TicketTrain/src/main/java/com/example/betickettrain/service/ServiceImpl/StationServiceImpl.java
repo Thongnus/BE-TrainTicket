@@ -13,7 +13,12 @@ import com.example.betickettrain.util.Constants;
 import io.netty.util.Constant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +30,7 @@ import static com.example.betickettrain.util.Constants.Cache.CACHE_STATION;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class StationServiceImpl implements StationService {
 
     private final StationRepository stationRepository;
@@ -32,7 +38,7 @@ public class StationServiceImpl implements StationService {
     private final GenericCacheService cacheService;
 
     private static final String ALL_STATIONS_KEY = "all";
-
+    private static final String ALL_PAGE_STATIONS_KEY = "page_all";
     @Override
     public List<StationDto> getAllStations() {
         // Check cache first
@@ -181,7 +187,7 @@ public class StationServiceImpl implements StationService {
         // Invalidate caches
         cacheService.remove(CACHE_STATION, id);
         cacheService.remove(CACHE_STATION, ALL_STATIONS_KEY);
-        
+    //    cacheService.remove(CACHE_STATION,ALL_PAGE_STATIONS_KEY);
         // Invalidate status caches if status changed
         if (oldStatus != null) {
             cacheService.remove(CACHE_STATION, "status_" + oldStatus);
@@ -208,8 +214,25 @@ public class StationServiceImpl implements StationService {
         // Invalidate caches
         cacheService.remove(CACHE_STATION, id);
         cacheService.remove(CACHE_STATION, ALL_STATIONS_KEY);
+       // cacheService.remove(CACHE_STATION,ALL_PAGE_STATIONS_KEY);
         if (status != null) {
             cacheService.remove(CACHE_STATION, "status_" + status);
         }
+    }
+
+    @Override
+    public Page<StationDto> getStationsPaged(int page, int size) {
+//        Page<StationDto> cachedStations = cacheService.get(CACHE_STATION, ALL_PAGE_STATIONS_KEY, Page.class);
+//
+//        if (cachedStations != null) {
+//            return cachedStations;
+//        }
+        Pageable pageable = PageRequest.of(page, size, Sort.by("stationName").ascending());
+        Page<Station> stationPage = stationRepository.findAll(pageable);
+        log.info(" ️️Lấy thông tin train từ DB");
+        // Save to cache
+     //   cacheService.put(CACHE_STATION, ALL_PAGE_STATIONS_KEY, stationPage);
+
+        return stationPage.map(stationMapper::toDto);
     }
 }

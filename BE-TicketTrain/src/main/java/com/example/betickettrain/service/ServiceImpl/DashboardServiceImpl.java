@@ -82,8 +82,11 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public List<PopularRouteDTO> getPopularRoutes() {
-        return ticketRepository.findPopularRoutes();
+        List<PopularRouteProjection> projections = ticketRepository.findPopularRoutes();
+
+        return projections.stream().map(p -> new PopularRouteDTO(p.getId(), p.getName(), p.getBookings(), p.getRevenue())).collect(Collectors.toList());
     }
+
 
     @Override
     public List<TicketCarriageDistributionDTO> getTicketDistributionByCarriage() {

@@ -2,6 +2,7 @@ package com.example.betickettrain.service;
 
 import com.example.betickettrain.dto.StationDto;
 import com.example.betickettrain.entity.Station;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -13,4 +14,5 @@ public interface StationService {
     StationDto createStation(StationDto stationDto);
     StationDto updateStation(Integer id, StationDto stationDto);
     void deleteStation(Integer id);
+    Page<StationDto> getStationsPaged(int page, int size);
 }

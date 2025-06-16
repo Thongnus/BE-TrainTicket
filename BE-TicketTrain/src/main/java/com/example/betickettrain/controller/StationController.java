@@ -5,6 +5,7 @@ import com.example.betickettrain.entity.Station;
 import com.example.betickettrain.service.StationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -53,4 +54,10 @@ public class StationController {
         stationService.deleteStation(id);
         return ResponseEntity.noContent().build();
     }
+    @GetMapping("/paged")
+    public Page<StationDto> getPagedStations(@RequestParam(defaultValue = "0")  int page,
+                                             @RequestParam(defaultValue = "10") int size) {
+        return stationService.getStationsPaged(page, size);
+    }
+
 }

@@ -1,6 +1,7 @@
 package com.example.betickettrain.dto;
 
 import com.example.betickettrain.entity.Route;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,6 +22,8 @@ public class RouteDto implements Serializable {
     Float distance;
     String description;
     Route.Status status;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime updatedAt;
 }

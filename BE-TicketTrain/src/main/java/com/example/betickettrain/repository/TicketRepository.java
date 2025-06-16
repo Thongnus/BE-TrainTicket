@@ -2,6 +2,7 @@ package com.example.betickettrain.repository;
 
 import com.example.betickettrain.dto.PassengerTicketDto;
 import com.example.betickettrain.dto.PopularRouteDTO;
+import com.example.betickettrain.dto.PopularRouteProjection;
 import com.example.betickettrain.dto.TicketCarriageDistributionDTO;
 import com.example.betickettrain.entity.Ticket;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -43,7 +44,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Integer> {
     GROUP BY r.routeId, r.routeName
     ORDER BY bookings DESC
 """)
-    List<PopularRouteDTO> findPopularRoutes();
+    List<PopularRouteProjection> findPopularRoutes();
 
 
     @Query(value = """
