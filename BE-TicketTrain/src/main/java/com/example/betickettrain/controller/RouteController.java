@@ -2,24 +2,28 @@ package com.example.betickettrain.controller;
 
 import com.example.betickettrain.dto.RouteDto;
 import com.example.betickettrain.dto.RouteStationDto;
+import com.example.betickettrain.dto.RouteWithStationsRequest;
 import com.example.betickettrain.service.RouteService;
 import com.example.betickettrain.service.ServiceImpl.RouteStationServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/routes")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 public class RouteController {
-
     private final RouteService routeService;
     private final RouteStationServiceImpl routeStationService;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @PostMapping
     public ResponseEntity<RouteDto> createRoute(@RequestBody RouteDto routeDto) {
@@ -50,8 +54,8 @@ public class RouteController {
 
     // Route Station endpoints
     @PostMapping("/{routeId}/stations")
-    public ResponseEntity<Void> addStationsToRoute(@PathVariable Integer routeId, 
-                                                  @RequestBody List<RouteStationDto> stationDtos) {
+    public ResponseEntity<Void> addStationsToRoute(@PathVariable Integer routeId,
+                                                   @RequestBody List<RouteStationDto> stationDtos) {
         // Ensure all stations are associated with the correct route ID
         stationDtos.forEach(station -> station.setRouteId(routeId));
         routeStationService.saveRouteStations(stationDtos);
@@ -70,26 +74,22 @@ public class RouteController {
     }
 
     @PostMapping("/with-stations")
-    public ResponseEntity<Map<String, Object>> createRouteWithStations(
-            @RequestBody Map<String, Object> requestBody) {
-        
-        RouteDto routeDto = routeService.createRoute((RouteDto) requestBody.get("route"));
-        
-        @SuppressWarnings("unchecked")
-        List<RouteStationDto> stationDtos = (List<RouteStationDto>) requestBody.get("stations");
-        
-        // Set the route ID for all stations
-        stationDtos.forEach(station -> station.setRouteId(routeDto.getRouteId()));
-        
-        // Save the stations
-        routeStationService.saveRouteStations(stationDtos);
-        
-        // Return both the route and its stations
-        Map<String, Object> response = Map.of(
-            "route", routeDto,
-            "stations", routeStationService.getStationsByRoute(routeDto.getRouteId())
+    public ResponseEntity<?> createRouteWithStations(
+            @Valid @RequestBody RouteWithStationsRequest request) {
+
+        routeService.createRouteWithStations(
+                request.getRoute(),
+                request.getStations()
         );
-        
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
+    @PutMapping("/{id}/with-stations")
+    public ResponseEntity<?> updateRouteWithStations(
+            @PathVariable Integer id,
+            @RequestBody RouteWithStationsRequest request) {
+        routeService.updateRouteWithStations(id, request.getRoute(), request.getStations());
+        return ResponseEntity.ok("Cập nhật thành công");
+    }
+
 }

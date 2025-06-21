@@ -79,7 +79,20 @@ public class GlobalExceptionHandler {
         return Response.error(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "INTERNAL_ERROR",
-                "An unexpected error occurred"
+                ex.getMessage()
         );
+    }
+
+    // Xử lý BusinessException riêng biệt
+    @ExceptionHandler(BusinessException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public Response<Void> handleBusinessException(BusinessException ex) {
+        log.warn("Business exception: {}", ex.getMessage());
+        ex.printStackTrace();
+        return Response.error(
+                ex.getErrorCode(),
+                ex.getMessage()
+        );
+
     }
 }

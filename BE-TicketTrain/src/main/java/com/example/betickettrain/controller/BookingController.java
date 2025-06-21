@@ -15,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -61,4 +62,30 @@ public class BookingController {
 
 
     }
+    @GetMapping("/checkin")
+    @PreAuthorize("hasRole('ADMIN')") // Chỉ cho phép người dùng đã đăng nhập
+    //tam thoi chua build 1 app rieng gianh cho viec check-in nên tạm thòi quét thì tự động xác nhận check-in
+    public ResponseEntity<?> checkInBooking(@RequestParam("code") String bookingCode) {
+        try {
+            BookingDto booking = bookingService.findBookingByBookingCode(bookingCode);
+            if (booking == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "Không tìm thấy đơn đặt vé"));
+            }
+
+            // (Tùy chọn) Xác nhận trạng thái vé và cập nhật
+            bookingService.markTicketsCheckedIn(booking.getBookingId());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Check-in thành công",
+                    "bookingCode", booking.getBookingCode(),
+                    "bookingDate", booking.getBookingDate(),
+                    "totalAmount", booking.getTotalAmount()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Đã xảy ra lỗi khi check-in"));
+        }
+    }
+
 }

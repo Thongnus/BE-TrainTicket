@@ -146,8 +146,7 @@ public void sendEmailWithQRCode( String to, String subject, String text, byte[] 
         helper.setSubject(subject);
 
         // Nội dung email dạng HTML có nhúng ảnh
-        String htmlContent = text + "<br><img src='cid:qrCodeImage'/>";
-        helper.setText(htmlContent, true);
+        helper.setText(text, true);
 
         // Đính kèm ảnh QR code inline với Content-ID = qrCodeImage
         helper.addInline("qrCodeImage", new ByteArrayResource(qrCodeBytes), "image/png");

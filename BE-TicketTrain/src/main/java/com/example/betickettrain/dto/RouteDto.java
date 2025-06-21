@@ -19,6 +19,10 @@ import java.time.LocalDateTime;
 public class RouteDto implements Serializable {
     Integer routeId;
     String routeName;
+    private Integer originStationId;       // Gửi lên khi create
+    private Integer destinationStationId;
+    private String originStationName;       // Gửi lên khi create
+    private String destinationStationName; // Gửi lên khi create
     Float distance;
     String description;
     Route.Status status;

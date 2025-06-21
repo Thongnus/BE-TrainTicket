@@ -42,7 +42,12 @@ public class Response<T> {
         response.setMessage(message);
         return response;
     }
-
+    public static <T> Response<T> error( String code, String message) {
+        Response<T> response = new Response<>();
+        response.setCode(code);
+        response.setMessage(message);
+        return response;
+    }
     public  static <T>   Response<T> error(int status, String code, String message, T data) {
         Response<T> response = new Response<>();
         response.setStatus(status);

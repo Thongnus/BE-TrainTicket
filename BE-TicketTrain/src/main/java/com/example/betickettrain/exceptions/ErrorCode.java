@@ -10,7 +10,9 @@ public enum ErrorCode {
     INTERNAL_ERROR("A05", "Internal server error"),
     ROUTER_NOT_FOUND("A06","Router not found"),
     CARRIAGE_NOT_FOUND("A07","Carriage not found"),
-    SEAT_LOCK("SEATLOCK","Seat is locked")
+    SEAT_LOCK("SEATLOCK","Seat is locked"),
+    DUPLICATE_STATION("A08", "Duplicate entry")
+
     ;
 
     public final String code;

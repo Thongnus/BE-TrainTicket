@@ -1,6 +1,7 @@
 package com.example.betickettrain.repository;
 
 
+import com.example.betickettrain.dto.BookingDto;
 import com.example.betickettrain.entity.Booking;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;

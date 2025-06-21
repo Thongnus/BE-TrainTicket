@@ -17,6 +17,8 @@ import jakarta.mail.MessagingException;
 import jakarta.persistence.criteria.Predicate;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.errors.ResourceNotFoundException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -35,6 +37,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static com.example.betickettrain.util.Constants.qrBaseUrl;
 import static com.example.betickettrain.util.QrCodeGenerator.bufferedImageToByteArray;
 import static com.example.betickettrain.util.QrCodeGenerator.generateQRCodeImage;
 
@@ -59,6 +62,7 @@ public class BookingServiceImpl implements BookingService {
 
     private final NotificationRepository notificationRepository;
     private final PaymentRepository paymentRepository;
+
 
 
 
@@ -333,44 +337,30 @@ public class BookingServiceImpl implements BookingService {
         return bookingHistoryDTOs;
     }
 
+    @Override
+    public BookingDto findBookingByBookingCode(String bookingCode) {
+        return bookingRepository.findByBookingCode(bookingCode)
+                .map(bookingMapper::toDto)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with code: " + bookingCode));
+    }
 
-    /**
-     * Tính giá vé dựa trên route, seat và trip
-     */
-//    private double calculateTicketPrice(Route route, Seat seat, Trip trip) {
-    //        // Lấy carriage type từ seat
-    //        Carriage.CarriageType carriageType = seat.getCarriage().getCarriageType();
-//
-//        // Lấy giá cơ bản từ bảng ticket_prices theo route và carriage type
-//        TicketPrice ticketPrice = ticketPriceRepository
-//                .findByRouteAndCarriageTypeAndDateRange(route.getRouteId(), carriageType, trip.getDepartureTime().toLocalDate())
-//                .orElseThrow(() -> new RuntimeException("Ticket price not found for route: " + route.getRouteId() +
-//                        " and carriage type: " + carriageType));
-//
-//        double finalPrice = ticketPrice.getBasePrice();
-//
-//        // Áp dụng phụ phí cuối tuần
-//        if (isWeekend(trip.getDepartureTime().toLocalDate())) {
-//            finalPrice += ticketPrice.getWeekendSurcharge() != null ? ticketPrice.getWeekendSurcharge() : 0;
-//        }
-//
-//        // Áp dụng phụ phí lễ (cần implement logic check holiday)
-//        if (isHoliday(trip.getDepartureTime().toLocalDate())) {
-//            finalPrice += ticketPrice.getHolidaySurcharge() != null ? ticketPrice.getHolidaySurcharge() : 0;
-//        }
-//
-//        // Áp dụng phụ phí giờ cao điểm
-//        if (isPeakHour(trip.getDepartureTime().toLocalTime())) {
-//            finalPrice += ticketPrice.getPeakHourSurcharge() != null ? ticketPrice.getPeakHourSurcharge() : 0;
-//        }
-//
-//        // Áp dụng discount rate nếu có
-//        if (ticketPrice.getDiscountRate() != null && ticketPrice.getDiscountRate() > 0) {
-//            finalPrice = finalPrice * (1 - ticketPrice.getDiscountRate() / 100);
-//        }
-//
-//        return finalPrice;
-//    }
+    @Override
+    public void markTicketsCheckedIn(Integer bookingId) {
+        List<Ticket> tickets = ticketRepository.findAllByBookingBookingId(bookingId);
+        if(tickets==null || tickets.isEmpty()) {
+            throw new ResourceNotFoundException("No tickets found for booking ID: " + bookingId);
+        }
+        for (Ticket ticket : tickets) {
+            // Chỉ check-in nếu vé đang ở trạng thái 'booked'
+            if (Ticket.Status.booked.equals(ticket.getStatus())) {
+                ticket.setStatus(Ticket.Status.checked_in);
+            }
+        }
+
+        ticketRepository.saveAll(tickets); // cập nhật hàng loạt
+    }
+
+
     private double calculateDynamicPrice(TicketPrice price, LocalDateTime depTime) {
         double total = price.getBasePrice();
         if (isWeekend(depTime.toLocalDate())) total += Optional.ofNullable(price.getWeekendSurcharge()).orElse(0.0);
@@ -652,7 +642,7 @@ public class BookingServiceImpl implements BookingService {
                 //    String emailContent = buildEmailContent(bookingDto, tickets);
                             String emailContent = TemplateMail.buildEmailHtmlContent(bookingDto,tickets);
                     //test send mail with qr
-                    BufferedImage qrImage = generateQRCodeImage(booking.getBookingCode());
+                    BufferedImage qrImage = generateQRCodeImage(qrBaseUrl+booking.getBookingCode());
                     byte[] qrBytes = bufferedImageToByteArray(qrImage, "PNG");
                     emailService.sendEmailWithQRCode(booking.getContactEmail(), "Thông tin vé tàu của bạn", emailContent, qrBytes);
                     //   emailService.sendEmail(userEmail, subject, emailContent);

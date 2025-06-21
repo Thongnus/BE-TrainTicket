@@ -97,7 +97,7 @@ public class User_impl implements UserService {
         user.setPhone(request.getPhoneNumber());
         user.setPassword(passwordEncoder.encode(request.getPassWord()));
         user.setRoles(assignRoles(request.getRoles()));
-
+        user.setStatus(User.Status.active.toString());
         return user;
     }
 

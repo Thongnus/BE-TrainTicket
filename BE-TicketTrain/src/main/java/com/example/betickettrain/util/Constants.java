@@ -1,7 +1,7 @@
 package com.example.betickettrain.util;
 
 public final class Constants {
-
+    public static final String qrBaseUrl="https://localhost:8080/api/bookings/checkin?code=";
     public static final class Action {
         public static final String CREATE = "CREATE";
         public static final String UPDATE = "UPDATE";
