@@ -1,6 +1,7 @@
 package com.example.betickettrain.controller;
 
 import com.example.betickettrain.dto.TrainDto;
+import com.example.betickettrain.entity.Train;
 import com.example.betickettrain.service.TrainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -45,5 +46,9 @@ public class TrainController {
     public ResponseEntity<Void> deleteTrain(@PathVariable Long id) {
         trainService.deleteTrain(id);
         return ResponseEntity.noContent().build();
+    }
+    @GetMapping("/status/{status}")
+    public ResponseEntity<List<TrainDto>> getTrainsByStatus(@PathVariable Train.Status status) {
+        return ResponseEntity.ok(trainService.getTrainsByStatus(status));
     }
 }

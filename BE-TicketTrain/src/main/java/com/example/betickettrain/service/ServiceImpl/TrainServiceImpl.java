@@ -18,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -103,5 +102,12 @@ public class TrainServiceImpl implements TrainService {
        // log.debug("📘 Logged [{}] [{}:{}] - {}", logAction.action(), logAction.entity(), entityId, desString);
         systemLogService.logAction(logg);
         log.debug("📘 Sent log to WebSocket: {}", logg);
+    }
+    @Override
+    public List<TrainDto> getTrainsByStatus(Train.Status status) {
+        List<Train> trains = trainRepository.findAllByStatus(status);
+        return trains.stream()
+                .map(trainMapper::toDto)
+                .toList();
     }
 }

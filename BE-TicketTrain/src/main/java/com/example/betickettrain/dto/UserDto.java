@@ -31,6 +31,6 @@ public class UserDto implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime updatedAt;
     Set<Role> roles;
-    Instant lastLogin;
+    LocalDateTime lastLogin;
     String status; // Thêm status
 }

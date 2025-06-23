@@ -6,6 +6,10 @@ import com.example.betickettrain.service.SeatService;
 import com.example.betickettrain.service.TripService;
 import com.example.betickettrain.service.TripTrackingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -113,5 +117,28 @@ public class TripController {
     public ResponseEntity<String> markDelayed(@PathVariable Integer tripId) {
         tripService.markTripDelayed(tripId);
         return ResponseEntity.ok("Chuyến đã được đánh dấu là trễ.");
+    }
+    @GetMapping("/paged/search")
+    public ResponseEntity<Page<TripDto>> searchTrips(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false, defaultValue = "all") String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "departureTime,desc") String[] sort
+    ) {
+
+        // Tạo đối tượng Pageable
+        Pageable pageable = PageRequest.of(page, size, parseSort(sort));
+        Page<TripDto> result = tripService.findTrips(search, status, pageable);
+        return ResponseEntity.ok(result);
+    }
+
+    // Helper method để xử lý sort param
+    private Sort parseSort(String[] sort) {
+        if (sort.length == 2) {
+            return Sort.by(Sort.Direction.fromString(sort[1]), sort[0]);
+        } else {
+            return Sort.by("departureTime").descending();
+        }
     }
 }

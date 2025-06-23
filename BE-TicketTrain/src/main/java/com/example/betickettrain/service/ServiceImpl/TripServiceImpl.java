@@ -9,13 +9,19 @@ import com.example.betickettrain.repository.*;
 import com.example.betickettrain.service.GenericCacheService;
 import com.example.betickettrain.service.TripService;
 import com.example.betickettrain.util.Constants;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -207,4 +213,41 @@ public class TripServiceImpl implements TripService  {
         trip.setStatus(Trip.Status.delayed);
         tripRepository.save(trip);
     }
+    @Override
+    public Page<TripDto> findTrips(String search, String status, Pageable pageable) {
+        Specification<Trip> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (search != null && !search.isEmpty()) {
+                String searchPattern = "%" + search.toLowerCase() + "%";
+
+                // Join đến route và train để search theo tên
+                Join<Object, Object> routeJoin = root.join("route");
+                Join<Object, Object> trainJoin = root.join("train");
+
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("tripCode")), searchPattern),
+                        cb.like(cb.lower(routeJoin.get("routeName")), searchPattern),
+                        cb.like(cb.lower(trainJoin.get("trainName")), searchPattern)
+                ));
+            }
+
+            if (status != null && !status.equalsIgnoreCase("all")) {
+                try {
+                    Trip.Status tripStatus = Trip.Status.valueOf(status.toLowerCase());
+                    predicates.add(cb.equal(root.get("status"), tripStatus));
+                } catch (IllegalArgumentException e) {
+                    // Nếu truyền sai enum (ví dụ: "running") → bỏ lọc
+                    log.warn("Trạng thái chuyến tàu không hợp lệ: " + status);
+                }
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return tripRepository.findAll(spec, pageable).map(tripMapper::toDto);
+    }
+
+
+
 }

@@ -3,6 +3,8 @@ package com.example.betickettrain.controller;
 import com.example.betickettrain.dto.RouteDto;
 import com.example.betickettrain.dto.RouteStationDto;
 import com.example.betickettrain.dto.RouteWithStationsRequest;
+import com.example.betickettrain.entity.Route;
+import com.example.betickettrain.entity.Station;
 import com.example.betickettrain.service.RouteService;
 import com.example.betickettrain.service.ServiceImpl.RouteStationServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,7 +37,10 @@ public class RouteController {
     public ResponseEntity<List<RouteDto>> getAllRoutes() {
         return ResponseEntity.ok(routeService.getAllRoutes());
     }
-
+    @GetMapping("/status/{status}")
+    public ResponseEntity<List<RouteDto>> getAllRoutes(@PathVariable Route.Status status) {
+        return ResponseEntity.ok(routeService.getAllRoutes());
+    }
     @GetMapping("/{id}")
     public ResponseEntity<RouteDto> getRouteById(@PathVariable Integer id) {
         return ResponseEntity.ok(routeService.getRouteById(id));

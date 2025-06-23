@@ -69,7 +69,7 @@ public class User  implements UserDetails {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    private Instant lastLogin;
+    private LocalDateTime lastLogin;
 
     private String status; // Thêm status
     @Override

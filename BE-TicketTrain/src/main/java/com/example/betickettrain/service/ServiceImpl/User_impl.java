@@ -216,7 +216,7 @@ public class User_impl implements UserService {
             if (role != null && !role.equals("all")) {
                 predicates.add(cb.equal(
                         root.join("roles").get("name"),
-                        "ROLE_" + role.toUpperCase()
+                        role.toUpperCase()
                 ));
             }
 

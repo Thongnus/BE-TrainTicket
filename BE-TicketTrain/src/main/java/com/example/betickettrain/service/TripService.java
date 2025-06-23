@@ -5,6 +5,8 @@ import com.example.betickettrain.dto.TrainRouteDto;
 import com.example.betickettrain.dto.TripDto;
 import com.example.betickettrain.dto.TripSearchResult;
 import com.example.betickettrain.entity.Trip;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.query.Procedure;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,4 +33,6 @@ public interface TripService {
 
     @Transactional
     void markTripDelayed(Integer tripId);
+
+    Page<TripDto> findTrips(String search, String status, Pageable pageable);
 }

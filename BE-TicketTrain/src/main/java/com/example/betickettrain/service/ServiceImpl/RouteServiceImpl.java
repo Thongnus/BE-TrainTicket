@@ -186,5 +186,15 @@ public class RouteServiceImpl implements RouteService {
             throw new BusinessException("ROUTE_UPDATE_FAILED", "Failed to update route with stations");
         }
     }
+    public List<RouteDto> getRoutesByStatus(Route.Status status) {
+        List<RouteDto> cached = cacheService.get(CACHE_ROUTE, status.name());
+        if (cached != null) return cached;
 
+        List<RouteDto> dtos = routeRepository.findAllByStatus(status).stream()
+                .map(routeMapper::toDto)
+                .toList();
+
+        cacheService.put(CACHE_ROUTE, status.name(), dtos);
+        return dtos;
+    }
 }
