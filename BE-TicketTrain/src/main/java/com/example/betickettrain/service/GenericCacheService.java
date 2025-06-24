@@ -28,18 +28,18 @@ public class GenericCacheService {
     public <K, V> V get(String cacheName, K key, Class<V> clazz) {
         Map<Object, Object> cache = caches.computeIfAbsent(cacheName, k -> new ConcurrentHashMap<>());
 
-        // 1. Kiểm tra local cache
-        if (cache != null && cache.containsKey(key)) {
-            log.info("🔄 Lấy từ LOCAL cache [{}]: key = {}", cacheName, key);
-            return clazz.cast(cache.get(key));
-        }
+//        // 1. Kiểm tra local cache
+//        if (cache != null && cache.containsKey(key)) {
+//            log.info("🔄 Lấy từ LOCAL cache [{}]: key = {}", cacheName, key);
+//            return clazz.cast(cache.get(key));
+//        }
 
         // 2. Thử lấy từ Redis
         String redisKey = buildRedisKey(cacheName, key);
         V value = redisCacheService.getCachedData(redisKey, clazz);
 
         if (value != null) {
-            cache.put(key, value); // Ghi lại local
+           // cache.put(key, value); // Ghi lại local
             log.info("☁️  Lấy từ REDIS cache [{}]: key = {}", cacheName, key);
             return value;
         }

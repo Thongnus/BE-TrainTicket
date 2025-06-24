@@ -97,7 +97,7 @@ public class TripServiceImpl implements TripService  {
     @Override
     @Transactional(readOnly = true)
     public TripDto getTrip(Integer id) {
-        TripDto cached = cacheService.get(Constants.Cache.CACHE_TRIP, id);
+        TripDto cached = cacheService.get(Constants.Cache.CACHE_TRIP, id, TripDto.class);
         if (cached != null) return cached;
         log.info(" ️️Lấy thông tin chuyến tàu từ DB");
         TripDto dto = tripRepository.findById(id)

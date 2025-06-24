@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.Value;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -21,7 +22,7 @@ public class TripDto implements Serializable {
     RouteDto route;
     TrainDto train;
     String tripCode;
-    @JsonFormat(pattern = "HH:mm:ss dd/MM/yyyy ")
+    @JsonFormat(pattern = "HH:mm:ss dd/MM/yyyy")
     LocalDateTime departureTime;
     @JsonFormat(pattern = "HH:mm:ss dd/MM/yyyy")
     LocalDateTime arrivalTime;
