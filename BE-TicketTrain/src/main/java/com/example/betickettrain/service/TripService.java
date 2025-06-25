@@ -32,7 +32,7 @@ public interface TripService {
     List<TrainRouteDto> findPopularRoutes(int limit);
 
     @Transactional
-    void markTripDelayed(Integer tripId);
+    void markTripDelayed(Integer tripId,Integer delayInMinutes,String delayReason);
 
     Page<TripDto> findTrips(String search, String status, Pageable pageable);
 }

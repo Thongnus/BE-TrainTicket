@@ -5,6 +5,7 @@ import com.example.betickettrain.entity.Notification;
 import com.example.betickettrain.mapper.UserMapper;
 import com.example.betickettrain.repository.NotificationRepository;
 import com.example.betickettrain.service.EmailService;
+import com.example.betickettrain.util.TemplateMail;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
@@ -153,5 +154,41 @@ public void sendEmailWithQRCode( String to, String subject, String text, byte[] 
 
         mailSender.send(message);
     }
+    @Override
+    public void sendTripDelayEmail(String to, String tripCode, String departureTime, int delayMinutes, String reason) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject("Thông báo trễ chuyến tàu " + tripCode);
+            helper.setText(TemplateMail.buildTripDelayHtml(tripCode, departureTime, delayMinutes, reason), true);
+
+            mailSender.send(message);
+            log.info("✅ Đã gửi email trễ chuyến tới {}", to);
+        } catch (MessagingException e) {
+            log.error("❌ Lỗi gửi email trễ chuyến tới {}", to, e);
+            throw new RuntimeException("Không gửi được email trễ chuyến", e);
+        }
+    }
+
+    @Override
+    public void sendTripCancelEmail(String to, String tripCode, String departureTime, String reason) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject("Thông báo huỷ chuyến tàu " + tripCode);
+            helper.setText(TemplateMail.buildTripCancelHtml(tripCode, departureTime, reason), true);
+
+            mailSender.send(message);
+            log.info("✅ Đã gửi email huỷ chuyến tới {}", to);
+        } catch (MessagingException e) {
+            log.error("❌ Lỗi gửi email huỷ chuyến tới {}", to, e);
+            throw new RuntimeException("Không gửi được email huỷ chuyến", e);
+        }
+    }
+
 
 }

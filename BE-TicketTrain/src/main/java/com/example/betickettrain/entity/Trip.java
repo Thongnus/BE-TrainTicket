@@ -55,7 +55,8 @@ public class Trip {
     @UpdateTimestamp
     @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime updatedAt;
-
+   @Column(name = "delay_reason")
+    private String delayReason;
     public enum Status {
         scheduled, delayed, cancelled, completed
     }

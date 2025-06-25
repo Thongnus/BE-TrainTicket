@@ -25,4 +25,8 @@ public interface EmailService {
     void notifyAdminEmailFailure(BookingDto booking);
 
     void sendEmailWithQRCode( String to, String subject, String text, byte[] qrCodeBytes) throws MessagingException;
+
+    void sendTripDelayEmail(String to, String tripCode, String departureTime, int delayMinutes, String reason);
+
+    void sendTripCancelEmail(String to, String tripCode, String departureTime, String reason);
 }

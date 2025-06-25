@@ -9,8 +9,10 @@ import com.example.betickettrain.repository.*;
 import com.example.betickettrain.service.GenericCacheService;
 import com.example.betickettrain.service.TripService;
 import com.example.betickettrain.util.Constants;
+import com.example.betickettrain.util.utils;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
@@ -21,10 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -41,8 +40,9 @@ public class TripServiceImpl implements TripService  {
     private final TripMapper tripMapper; // ✅ NEW: Mapper
     private final TripScheduleRepository tripScheduleRepository;
     private final RouteStationRepository routeStationRepository;
+    private final SystemLogRepository systemLogRepository;
     private static final String ALL_TRIPS_KEY = "all";
-
+    private final HttpServletRequest request;
     @Override
     @LogAction(action = Constants.Action.CREATE,entity = "Trip", description = " Create a trip")
     @Transactional
@@ -130,6 +130,7 @@ public class TripServiceImpl implements TripService  {
 
         trip.setStatus(status);
         Trip updated = tripRepository.save(trip);
+        // nếu là cancelled thì cần gửi email thông báo đến người dùng đã đặt vé trên chuyến tàu này
         cacheService.remove(Constants.Cache.CACHE_TRIP, id);
         cacheService.remove(Constants.Cache.CACHE_TRIP, ALL_TRIPS_KEY);
         return tripMapper.toDto(updated);
@@ -202,7 +203,7 @@ public class TripServiceImpl implements TripService  {
 
     @Transactional
     @Override
-    public void markTripDelayed(Integer tripId) {
+    public void markTripDelayed(Integer tripId,Integer delayInMinutes,String delayReason) {
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chuyến tàu"));
 
@@ -211,7 +212,23 @@ public class TripServiceImpl implements TripService  {
         }
 
         trip.setStatus(Trip.Status.delayed);
+        trip.setDelayMinutes(delayInMinutes);
+        trip.setDelayReason(delayReason);
         tripRepository.save(trip);
+        // Ghi log hệ thống
+        SystemLog logg = SystemLog.builder()
+                .user(utils.getUser())
+                .action(Constants.Action.UPDATE)
+                .entityType("trip")
+                .entityId( tripId)
+                .description("Đánh dấu trễ " + trip.getTripCode() + " (" + delayInMinutes + " phút)")
+                .ipAddress(request.getRemoteAddr())
+                .userAgent(request.getHeader("User-Agent"))
+                //   .logTime(LocalDateTime.now())
+                .build();
+        systemLogRepository.save(logg);
+        // cần add thêm batch job đ ể thông báo đến người dùng đã đặt vé trên chuyến tàu này
+
     }
     @Override
     public Page<TripDto> findTrips(String search, String status, Pageable pageable) {
