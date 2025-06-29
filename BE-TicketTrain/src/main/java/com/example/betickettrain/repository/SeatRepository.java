@@ -44,4 +44,6 @@ public interface SeatRepository extends JpaRepository<Seat, Integer> {
     List<Seat> findByCarriageCarriageId(Integer carriageCarriageId);
 
      List<Seat>  findBySeatIdIn(List<Integer> id);
+
+    void deleteAllByCarriage_CarriageId(Integer carriageCarriageId);
 }

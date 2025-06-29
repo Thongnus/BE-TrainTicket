@@ -4,8 +4,8 @@ import com.example.betickettrain.dto.CarriageDto;
 import com.example.betickettrain.entity.Carriage;
 import org.mapstruct.*;
 
-@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING,
-uses = {SeatMapper.class}) // Use SeatMapper to map seats within Carriage
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING
+) // Use SeatMapper to map seats within Carriage
 public interface CarriageMapper {
     @Mapping(source = "train.trainId", target = "trainId")
     @Mapping(source = "train.trainName", target = "trainName")

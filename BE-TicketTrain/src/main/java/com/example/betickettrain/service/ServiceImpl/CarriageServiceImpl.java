@@ -19,6 +19,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
@@ -44,21 +45,21 @@ public class CarriageServiceImpl implements CarriageService {
     private final ObjectMapper objectMapper;
     private final SeatMapper seatMapper;
     private final TrainRepository trainRepository;
+
     @Override
     public CarriageDto createCarriage(CarriageDto dto) {
-        if(dto.getTrainId() != null) {
-          dto.setCarriageId(null);
+        if (dto.getTrainId() != null) {
+            dto.setCarriageId(null);
         }
         Carriage entity = carriageMapper.toEntity(dto);
         // ✅ Kiểm tra trainId có hợp lệ không
         if (dto.getTrainId() != null) {
-            Train train = trainRepository.findById(Long.valueOf(dto.getTrainId()))
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Train với id = " + dto.getTrainId()));
+            Train train = trainRepository.findById(Long.valueOf(dto.getTrainId())).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Train với id = " + dto.getTrainId()));
             entity.setTrain(train);
         }
         Carriage saved = carriageRepository.save(entity);
         cacheService.clearCache(Constants.Cache.CACHE_CARRIAGE);
-     //   cacheService.remove(Constants.Cache.CACHE_CARRIAGE, ALL_KEY);
+        //   cacheService.remove(Constants.Cache.CACHE_CARRIAGE, ALL_KEY);
         cacheService.remove(Constants.Cache.CACHE_CARRIAGE_WITH_SEATS, ALL_KEY);
 
         return carriageMapper.toDto(saved);
@@ -66,24 +67,21 @@ public class CarriageServiceImpl implements CarriageService {
 
     @Override
     public CarriageDto updateCarriage(Integer id, CarriageDto dto) {
-        Carriage updated = carriageRepository.findById(id)
-                .map(existing -> {
-                    // Cập nhật các field thường bằng MapStruct
-                    carriageMapper.partialUpdate(dto, existing);
+        Carriage updated = carriageRepository.findById(id).map(existing -> {
+            // Cập nhật các field thường bằng MapStruct
+            carriageMapper.partialUpdate(dto, existing);
 
-                    // ✅ Cập nhật train nếu trainId khác và hợp lệ
-                    if (dto.getTrainId() != null) {
-                        Integer currentTrainId = existing.getTrain() != null ? existing.getTrain().getTrainId() : null;
-                        if (!dto.getTrainId().equals(currentTrainId)) {
-                            Train train = trainRepository.findById(Long.valueOf(dto.getTrainId()))
-                                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Train với id = " + dto.getTrainId()));
-                            existing.setTrain(train);
-                        }
-                    }
+            // ✅ Cập nhật train nếu trainId khác và hợp lệ
+            if (dto.getTrainId() != null) {
+                Integer currentTrainId = existing.getTrain() != null ? existing.getTrain().getTrainId() : null;
+                if (!dto.getTrainId().equals(currentTrainId)) {
+                    Train train = trainRepository.findById(Long.valueOf(dto.getTrainId())).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Train với id = " + dto.getTrainId()));
+                    existing.setTrain(train);
+                }
+            }
 
-                    return carriageRepository.save(existing);
-                })
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CARRIAGE_NOT_FOUND.message + id));
+            return carriageRepository.save(existing);
+        }).orElseThrow(() -> new ResourceNotFoundException(ErrorCode.CARRIAGE_NOT_FOUND.message + id));
 
         // ✅ Xoá cache liên quan
         cacheService.remove(Constants.Cache.CACHE_CARRIAGE, id);
@@ -94,13 +92,13 @@ public class CarriageServiceImpl implements CarriageService {
     }
 
 
-
+    @Transactional
     @Override
     public void deleteCarriage(Integer id) {
         if (!carriageRepository.existsById(id)) {
             throw new RuntimeException(ErrorCode.CARRIAGE_NOT_FOUND.message + id);
         }
-
+        seatRepository.deleteAllByCarriage_CarriageId(id); // ✅ Xoá tất cả ghế liên quan đến Carriage
         carriageRepository.deleteById(id);
 
         // ❌ Xoá cả cache liên quan đến CarriageWithSeats
@@ -114,9 +112,7 @@ public class CarriageServiceImpl implements CarriageService {
         CarriageDto cached = cacheService.get(Constants.Cache.CACHE_CARRIAGE, id, CarriageDto.class);
         if (cached != null) return cached;
 
-        CarriageDto dto = carriageRepository.findById(id)
-                .map(carriageMapper::toDto)
-                .orElseThrow(() -> new RuntimeException(ErrorCode.CARRIAGE_NOT_FOUND.message + id));
+        CarriageDto dto = carriageRepository.findById(id).map(carriageMapper::toDto).orElseThrow(() -> new RuntimeException(ErrorCode.CARRIAGE_NOT_FOUND.message + id));
 
         cacheService.put(Constants.Cache.CACHE_CARRIAGE, id, dto);
         return dto;
@@ -127,17 +123,12 @@ public class CarriageServiceImpl implements CarriageService {
         Object raw = cacheService.get(Constants.Cache.CACHE_CARRIAGE, ALL_KEY);
         if (raw != null) {
             // deserialize đúng kiểu
-            List<CarriageDto> cached = objectMapper.convertValue(
-                    raw,
-                    new TypeReference<List<CarriageDto>>() {
-                    }
-            );
+            List<CarriageDto> cached = objectMapper.convertValue(raw, new TypeReference<List<CarriageDto>>() {
+            });
             return cached;
         }
 
-        List<CarriageDto> dtos = carriageRepository.findAll().stream()
-                .map(carriageMapper::toDto)
-                .toList();
+        List<CarriageDto> dtos = carriageRepository.findAll().stream().map(carriageMapper::toDto).toList();
 
         cacheService.put(Constants.Cache.CACHE_CARRIAGE, ALL_KEY, dtos);
         return dtos;
@@ -160,10 +151,7 @@ public class CarriageServiceImpl implements CarriageService {
 
                 Join<Object, Object> trainJoin = root.join("train");
 
-                predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("tripCode")), searchPattern),
-                        cb.like(cb.lower(trainJoin.get("trainName")), searchPattern)
-                ));
+                predicates.add(cb.or(cb.like(cb.lower(root.get("tripCode")), searchPattern), cb.like(cb.lower(trainJoin.get("trainName")), searchPattern)));
             }
 
             if (status != null && !status.equalsIgnoreCase("all")) {
@@ -187,24 +175,18 @@ public class CarriageServiceImpl implements CarriageService {
     public List<CarriageWithSeatsDto> getAllCarriagesWithSeats() {
         Object cachedRaw = cacheService.get(Constants.Cache.CACHE_CARRIAGE_WITH_SEATS, ALL_KEY);
         if (cachedRaw != null) {
-            return objectMapper.convertValue(
-                    cachedRaw,
-                    new TypeReference<List<CarriageWithSeatsDto>>() {
-                    }
-            );
+            return objectMapper.convertValue(cachedRaw, new TypeReference<List<CarriageWithSeatsDto>>() {
+            });
         }
 
         List<CarriageDto> carriages = getAllCarriages();
 
-        List<CarriageWithSeatsDto> result = carriages.stream()
-                .map(carriage -> {
-                    List<SeatDto> seats = seatRepository.findByCarriageCarriageId(carriage.getCarriageId()).stream()
-                            .map(seatMapper::toDto) // ✅ fix chỗ này
-                            .collect(Collectors.toList());
+        List<CarriageWithSeatsDto> result = carriages.stream().map(carriage -> {
+            List<SeatDto> seats = seatRepository.findByCarriageCarriageId(carriage.getCarriageId()).stream().map(seatMapper::toDto) // ✅ fix chỗ này
+                    .collect(Collectors.toList());
 
-                    return new CarriageWithSeatsDto(carriage, seats);
-                })
-                .collect(Collectors.toList());
+            return new CarriageWithSeatsDto(carriage, seats);
+        }).collect(Collectors.toList());
 
         // ✅ Lưu cache
         cacheService.put(Constants.Cache.CACHE_CARRIAGE_WITH_SEATS, ALL_KEY, result);

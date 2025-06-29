@@ -1,5 +1,6 @@
 package com.example.betickettrain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -50,10 +51,7 @@ public class Carriage {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    // ✅ Thêm dòng sau để khi xoá carriage thì xoá luôn seats
-    @OneToMany(mappedBy = "carriage", cascade = CascadeType.REMOVE, orphanRemoval = true)
-    @JsonManagedReference
-    private List<Seat> seats;
+
     public enum CarriageType {
         hard_seat, soft_seat, hard_sleeper, soft_sleeper, vip
     }
