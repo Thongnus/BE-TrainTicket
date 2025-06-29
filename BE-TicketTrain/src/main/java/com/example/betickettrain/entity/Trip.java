@@ -57,6 +57,8 @@ public class Trip {
     private LocalDateTime updatedAt;
    @Column(name = "delay_reason")
     private String delayReason;
+   @Column(name = "cancelled_reason")
+   private String cancelledReason;
     public enum Status {
         scheduled, delayed, cancelled, completed
     }

@@ -6,7 +6,9 @@ import com.example.betickettrain.entity.*;
 import com.example.betickettrain.exceptions.ErrorCode;
 import com.example.betickettrain.mapper.TripMapper;
 import com.example.betickettrain.repository.*;
+import com.example.betickettrain.service.EmailService;
 import com.example.betickettrain.service.GenericCacheService;
+import com.example.betickettrain.service.NotificationService;
 import com.example.betickettrain.service.TripService;
 import com.example.betickettrain.util.Constants;
 import com.example.betickettrain.util.utils;
@@ -43,6 +45,8 @@ public class TripServiceImpl implements TripService  {
     private final SystemLogRepository systemLogRepository;
     private static final String ALL_TRIPS_KEY = "all";
     private final HttpServletRequest request;
+    private final EmailService emailService;
+    private final NotificationService notificationService;
     @Override
     @LogAction(action = Constants.Action.CREATE,entity = "Trip", description = " Create a trip")
     @Transactional
@@ -130,7 +134,6 @@ public class TripServiceImpl implements TripService  {
 
         trip.setStatus(status);
         Trip updated = tripRepository.save(trip);
-        // nếu là cancelled thì cần gửi email thông báo đến người dùng đã đặt vé trên chuyến tàu này
         cacheService.remove(Constants.Cache.CACHE_TRIP, id);
         cacheService.remove(Constants.Cache.CACHE_TRIP, ALL_TRIPS_KEY);
         return tripMapper.toDto(updated);
@@ -214,7 +217,7 @@ public class TripServiceImpl implements TripService  {
         trip.setStatus(Trip.Status.delayed);
         trip.setDelayMinutes(delayInMinutes);
         trip.setDelayReason(delayReason);
-        tripRepository.save(trip);
+       Trip saveTrip= tripRepository.save(trip);
         // Ghi log hệ thống
         SystemLog logg = SystemLog.builder()
                 .user(utils.getUser())
@@ -227,9 +230,49 @@ public class TripServiceImpl implements TripService  {
                 //   .logTime(LocalDateTime.now())
                 .build();
         systemLogRepository.save(logg);
+        List<String> userEmails = tripRepository.findEffectiveEmailsByTripId(tripId);
+        if (userEmails.isEmpty()) {
+            log.warn("Không tìm thấy người dùng nào đã đặt vé trên chuyến tàu {}", trip.getTripCode());
+            return;
+        }
+        cacheService.remove(Constants.Cache.CACHE_TRIP, tripId);
+        cacheService.remove(Constants.Cache.CACHE_TRIP, ALL_TRIPS_KEY);
+        notificationService.notifyUsers(saveTrip,userEmails);
+
         // cần add thêm batch job đ ể thông báo đến người dùng đã đặt vé trên chuyến tàu này
+    }
+
+    @Override
+    public void markTripCancel(Integer tripId, String cancelReason) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chuyến tàu"));
+
+        trip.setStatus(Trip.Status.cancelled);
+        trip.setCancelledReason(cancelReason);
+       Trip saveTrip = tripRepository.save(trip);
+        // Ghi log hệ thống
+        SystemLog logg = SystemLog.builder()
+                .user(utils.getUser())
+                .action(Constants.Action.UPDATE)
+                .entityType("trip")
+                .entityId( tripId)
+                .description("Đánh dấu cancelled " + trip.getTripCode() + " (" + cancelReason + ")")
+                .ipAddress(request.getRemoteAddr())
+                .userAgent(request.getHeader("User-Agent"))
+                //   .logTime(LocalDateTime.now())
+                .build();
+        systemLogRepository.save(logg);
+        List<String> userEmails = tripRepository.findEffectiveEmailsByTripId(tripId);
+        if (userEmails.isEmpty()) {
+            log.warn("Không tìm thấy người dùng nào đã đặt vé trên chuyến tàu {}", trip.getTripCode());
+            return;
+        }
+        cacheService.remove(Constants.Cache.CACHE_TRIP, tripId);
+        cacheService.remove(Constants.Cache.CACHE_TRIP, ALL_TRIPS_KEY);
+        notificationService.notifyUsers(saveTrip,userEmails);
 
     }
+
     @Override
     public Page<TripDto> findTrips(String search, String status, Pageable pageable) {
         Specification<Trip> spec = (root, query, cb) -> {

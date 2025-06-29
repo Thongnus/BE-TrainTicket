@@ -9,6 +9,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisPassword;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
@@ -26,12 +29,25 @@ public class RedisConfig {
 
     @Value("${spring.data.redis.port}")
     private int redisPort;
-
+    @Value("${spring.data.redis.password}")
+    private String password;
+    @Value("${spring.data.redis.username}")
+    private String username;
     // Cấu hình RedisConnectionFactory
     @Bean
     public LettuceConnectionFactory redisConnectionFactory() {
-        LettuceConnectionFactory factory = new LettuceConnectionFactory(redisHost, redisPort);
-        return factory;
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+        config.setHostName(redisHost);
+        config.setPort(redisPort);
+        config.setUsername(username);
+        config.setPassword(RedisPassword.of(password));
+
+        LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
+                .useSsl()
+                .disablePeerVerification()// <-- BẮT BUỘC Railway Redis
+                .build();
+
+        return new LettuceConnectionFactory(config, clientConfig);
     }
 
     // Cấu hình ObjectMapper cho việc serialize/deserialize các đối tượng Java 8 Date/Time types

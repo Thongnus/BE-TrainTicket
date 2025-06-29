@@ -94,5 +94,20 @@ public interface TripRepository extends JpaRepository<Trip, Integer>, JpaSpecifi
 """, nativeQuery = true)
     int markTripsCompletedIfExpired(@Param("expiredBefore") LocalDateTime expiredBefore);
 
+    @Query(value = """
+    SELECT DISTINCT
+        COALESCE(NULLIF(TRIM(b.contact_email), ''), u.email) AS email
+    FROM tickets t
+    JOIN bookings b ON t.booking_id = b.booking_id
+    JOIN users u ON b.user_id = u.user_id
+    WHERE t.trip_id = :tripId
+      AND b.booking_status IN ('confirmed', 'completed')
+      AND t.ticket_status IN ('booked', 'checked_in')
+      AND (
+          b.contact_email IS NOT NULL AND TRIM(b.contact_email) != ''
+          OR u.email IS NOT NULL
+      )
+""", nativeQuery = true)
+    List<String> findEffectiveEmailsByTripId(@Param("tripId") Integer tripId);
 
 }

@@ -52,5 +52,6 @@ public final class Constants {
         public static final String CACHE_STATISTICS = "CACHE_STATISTICS";
 
 
+        public static final String CACHE_CARRIAGE_WITH_SEATS = "carriage_with_seats";
     }
 }

@@ -10,11 +10,17 @@ import com.example.betickettrain.repository.*;
 import com.example.betickettrain.service.GenericCacheService;
 import com.example.betickettrain.service.SeatService;
 import com.example.betickettrain.util.Constants;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,7 +33,7 @@ import static com.example.betickettrain.util.Constants.Cache.CACHE_STATION;
 @Service
 @RequiredArgsConstructor
 public class SeatServiceImpl implements SeatService {
-    private static final String ALL_SEAT_KEY = "all";
+    private static final String ALL_KEY = "all";
     private final SeatRepository seatRepository;
     private final SeatMapper seatMapper;
     private final TripRepository tripRepository;
@@ -94,9 +100,13 @@ public class SeatServiceImpl implements SeatService {
     @LogAction(action = Constants.Action.CREATE, entity = "Seat", description = " Create a Seat")
     @Override
     public SeatDto createSeat(SeatDto seatDto) {
+        if(seatDto!=null && seatDto.getSeatNumber() != null) {
+         seatDto.setSeatId(null);
+        }
         Seat entity = seatMapper.toEntity(seatDto);
         Seat saved = seatRepository.save(entity);
         cacheService.clearCache(CACHE_SEAT); // xoá cache cũ
+        cacheService.remove(Constants.Cache.CACHE_CARRIAGE_WITH_SEATS, ALL_KEY);
         return seatMapper.toDto(saved);
     }
 
@@ -113,14 +123,14 @@ public class SeatServiceImpl implements SeatService {
         log.debug(" ️️Lấy thông tin ghế từ DB với id" + id);
         SeatDto dto = seatRepository.findById(id).map(seatMapper::toDto).orElseThrow(() -> new RuntimeException("SeatDto not found with id: " + id));
 
-        cacheService.put(Constants.Cache.CACHE_NEWFEED, id, dto);
+        cacheService.put(CACHE_SEAT, id, dto);
         return dto;
     }
 
     @Override
     public List<SeatDto> getAllSeats() {
         // Check cache first
-        List<SeatDto> cachedStations = cacheService.get(CACHE_STATION, ALL_SEAT_KEY);
+        List<SeatDto> cachedStations = cacheService.get(CACHE_SEAT, ALL_KEY);
 
         if (cachedStations != null) {
             return cachedStations;
@@ -130,7 +140,7 @@ public class SeatServiceImpl implements SeatService {
         List<SeatDto> seatDtos = seatRepository.findAll().stream().map(seatMapper::toDto).collect(Collectors.toList());
 
         // Save to cache
-        cacheService.put(CACHE_STATION, ALL_SEAT_KEY, seatDtos);
+        cacheService.put(CACHE_SEAT, ALL_KEY, seatDtos);
 
         return seatDtos;
 
@@ -141,11 +151,60 @@ public class SeatServiceImpl implements SeatService {
     public void deleteSeat(Integer id) {
         seatRepository.deleteById(id);
         cacheService.remove(CACHE_SEAT, id);
-        cacheService.remove(CACHE_SEAT, ALL_SEAT_KEY); // cập nhật lại danh sách sau khi xóa
+        cacheService.remove(CACHE_SEAT, ALL_KEY);
+        cacheService.remove(Constants.Cache.CACHE_CARRIAGE_WITH_SEATS, ALL_KEY);// cập nhật lại danh sách sau khi xóa
     }
 
     @Override
     public void unLockSeat(Integer tripId, List<Integer> idSeat) {
         idSeat.forEach(seatId -> redisSeatLockService.unlockSeat(tripId, seatId));
+    }
+
+    @Override
+    public List<CarriageSeatDto> getCarriageSeatByTripId(Integer tripId) {
+        return List.of();
+    }
+
+    @Override
+    public Page<SeatDto> getPagedSeats(String search, Pageable pageable) {
+        return null;
+//        Specification<Seat> spec = (root, query, cb) -> {
+//            List<Predicate> predicates = new ArrayList<>();
+//
+//            if (search != null && !search.isEmpty()) {
+//                String searchPattern = "%" + search.toLowerCase() + "%";
+//
+//                // Join đến route và train để search theo tên
+//                Join<Object, Object> carriageJoin = root.join("carriage");
+//
+//
+//                predicates.add(cb.or(
+//                        cb.like(cb.lower(root.get("seatNumber")), searchPattern),
+//                        cb.like(cb.lower(carriageJoin.get("routeName")), searchPattern),
+//                        cb.like(cb.lower(trainJoin.get("trainName")), searchPattern)
+//                ));
+//            }
+//
+//            if (status != null && !status.equalsIgnoreCase("all")) {
+//                try {
+//                    Trip.Status tripStatus = Trip.Status.valueOf(status.toLowerCase());
+//                    predicates.add(cb.equal(root.get("status"), tripStatus));
+//                } catch (IllegalArgumentException e) {
+//                    // Nếu truyền sai enum (ví dụ: "running") → bỏ lọc
+//                    log.warn("Trạng thái chuyến tàu không hợp lệ: " + status);
+//                }
+//            }
+//
+//            return cb.and(predicates.toArray(new Predicate[0]));
+//        };
+//
+//        return tripRepository.findAll(spec, pageable).map(tripMapper::toDto);
+    }
+
+    @Override
+    public List<SeatDto> getSeatsByCarriageId(Integer id) {
+        return  seatRepository.findByCarriageCarriageId(id).stream()
+                .map(seatMapper::toDto)
+                .collect(Collectors.toList());
     }
 }

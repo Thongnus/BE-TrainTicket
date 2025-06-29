@@ -1,8 +1,11 @@
 package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.dto.BookingDto;
+import com.example.betickettrain.entity.FailedEmailLog;
 import com.example.betickettrain.entity.Notification;
+import com.example.betickettrain.entity.Trip;
 import com.example.betickettrain.mapper.UserMapper;
+import com.example.betickettrain.repository.FailedEmailLogRepository;
 import com.example.betickettrain.repository.NotificationRepository;
 import com.example.betickettrain.service.EmailService;
 import com.example.betickettrain.util.TemplateMail;
@@ -11,14 +14,23 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.mail.MailException;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.EnableRetry;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Service
 @Slf4j
+@EnableRetry
 public class EmailServiceImpl implements EmailService {
     @Autowired
     private UserMapper userMapper;
@@ -28,7 +40,8 @@ public class EmailServiceImpl implements EmailService {
     @Autowired
     private NotificationRepository notificationRepository;
 
-
+    @Autowired
+    private FailedEmailLogRepository failedEmailLogRepository;
     @Override
     public void sendEmail(String to, String subject, String body) {
         try {
@@ -135,9 +148,8 @@ public class EmailServiceImpl implements EmailService {
     }
 
 
-@Override
-public void sendEmailWithQRCode( String to, String subject, String text, byte[] qrCodeBytes) throws MessagingException {
-
+    @Override
+    public void sendEmailWithQRCode(String to, String subject, String text, byte[] qrCodeBytes) throws MessagingException {
 
 
         MimeMessage message = mailSender.createMimeMessage();
@@ -154,40 +166,60 @@ public void sendEmailWithQRCode( String to, String subject, String text, byte[] 
 
         mailSender.send(message);
     }
+
+    @Async("emailExecutor")
+    @Retryable(
+            value = {MailException.class, MessagingException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 2000, multiplier = 2)
+    )
     @Override
-    public void sendTripDelayEmail(String to, String tripCode, String departureTime, int delayMinutes, String reason) {
+    public void sendTripStatusEmail(String to, String tripCode, LocalDateTime departureTime, Trip.Status status, Integer delayMinutes, String reason) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setTo(to);
-            helper.setSubject("Thông báo trễ chuyến tàu " + tripCode);
-            helper.setText(TemplateMail.buildTripDelayHtml(tripCode, departureTime, delayMinutes, reason), true);
+
+            if (Trip.Status.delayed.equals(status)) {
+                helper.setSubject("⏰ Thông báo trễ chuyến tàu " + tripCode);
+                helper.setText(TemplateMail.buildTripDelayHtml(tripCode, departureTime, delayMinutes, reason), true);
+            } else if (Trip.Status.cancelled.equals(status)) {
+                helper.setSubject("🚫 Thông báo huỷ chuyến tàu " + tripCode);
+                helper.setText(TemplateMail.buildTripCancelHtml(tripCode, departureTime, reason), true);
+            } else {
+                log.warn("⚠️ Không gửi email vì trạng thái không hợp lệ: {}", status);
+                return;
+            }
 
             mailSender.send(message);
-            log.info("✅ Đã gửi email trễ chuyến tới {}", to);
+            log.info("✅ Đã gửi email {} tới {}", status.equals(Trip.Status.delayed) ? "trễ chuyến" : "huỷ chuyến", to);
+
         } catch (MessagingException e) {
-            log.error("❌ Lỗi gửi email trễ chuyến tới {}", to, e);
-            throw new RuntimeException("Không gửi được email trễ chuyến", e);
+            log.error("❌ Lỗi gửi email {} tới {}", status, to, e);
+            throw new MailSendException("Không gửi được email trạng thái chuyến tàu", e);
         }
     }
 
-    @Override
-    public void sendTripCancelEmail(String to, String tripCode, String departureTime, String reason) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+    @Recover
+    public void recover(MailException e, String to, String tripCode, LocalDateTime departureTime, Trip.Status status, Integer delayMinutes, String reason) {
+        if( status.equals(Trip.Status.cancelled) ) delayMinutes =null;
+      //  log.error("❌ Email gửi thất bại vĩnh viễn tới {} cho chuyến {} trạng thái {}: {}", to, tripCode, status, e.getMessage());
+        // TODO: Ghi log DB, tạo job retry sau hoặc báo admin
+        FailedEmailLog log = FailedEmailLog.builder()
+                .recipientEmail(to)
+                .tripCode(tripCode)
+                .departureTime(departureTime)
+                .status(status)
+                .delayMinutes(delayMinutes)
+                .reason(reason)
+                .errorMessage(e.getMessage())
+                .retryCount(0)
+                .resolved(false)
+                .createdAt(LocalDateTime.now())
+                .build();
 
-            helper.setTo(to);
-            helper.setSubject("Thông báo huỷ chuyến tàu " + tripCode);
-            helper.setText(TemplateMail.buildTripCancelHtml(tripCode, departureTime, reason), true);
-
-            mailSender.send(message);
-            log.info("✅ Đã gửi email huỷ chuyến tới {}", to);
-        } catch (MessagingException e) {
-            log.error("❌ Lỗi gửi email huỷ chuyến tới {}", to, e);
-            throw new RuntimeException("Không gửi được email huỷ chuyến", e);
-        }
+        failedEmailLogRepository.save(log);
     }
 
 

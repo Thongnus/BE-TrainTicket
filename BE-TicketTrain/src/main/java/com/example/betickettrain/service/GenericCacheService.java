@@ -36,6 +36,7 @@ public class GenericCacheService {
 
         // 2. Thử lấy từ Redis
         String redisKey = buildRedisKey(cacheName, key);
+
         V value = redisCacheService.getCachedData(redisKey, clazz);
 
         if (value != null) {
@@ -71,9 +72,7 @@ public class GenericCacheService {
         String redisKey = buildRedisKey(cacheName, key);
         Object value = redisCacheService.getCachedData(redisKey);
         if (value != null) {
-            if (cache != null) {
-                cache.put(key, value);
-            }
+            cache.put(key, value);
             log.info("☁️  Lấy từ REDIS cache [{}]: key = {}", cacheName, key);
             return (V) value;
         }

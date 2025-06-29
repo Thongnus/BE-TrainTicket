@@ -115,10 +115,16 @@ public class TripController {
 
     @PostMapping("/{tripId}/delay")
     public ResponseEntity<?> markDelayed(@PathVariable Integer tripId,
-                                              @RequestParam Integer delayInMinutes,
-                                              @RequestParam(required = false) String delayReason) {
+                                              @RequestParam(required = true) Integer delayInMinutes,
+                                              @RequestParam(required = true) String delayReason) {
         tripService.markTripDelayed(tripId,delayInMinutes,delayReason);
         return ResponseEntity.ok("Chuyến đã được đánh dấu là trễ.");
+    }
+    @PostMapping("/{tripId}/cancel")
+    public ResponseEntity<?> markDelayed(@PathVariable Integer tripId,
+                                         @RequestParam(required = true) String cancelReason) {
+        tripService.markTripCancel(tripId,cancelReason);
+        return ResponseEntity.ok("Chuyến đã được đánh dấu là hủy.");
     }
     @GetMapping("/paged/search")
     public ResponseEntity<Page<TripDto>> searchTrips(

@@ -1,15 +1,17 @@
 package com.example.betickettrain.repository;
 
 import com.example.betickettrain.entity.Carriage;
+import com.example.betickettrain.entity.Trip;
 import io.lettuce.core.dynamic.annotation.Param;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
-public interface CarriageRepository extends JpaRepository<Carriage, Integer> {
+public interface CarriageRepository extends JpaRepository<Carriage, Integer> , JpaSpecificationExecutor<Carriage> {
 
     @Transactional
     @Modifying

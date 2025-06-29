@@ -33,6 +33,8 @@ public interface TripService {
 
     @Transactional
     void markTripDelayed(Integer tripId,Integer delayInMinutes,String delayReason);
+    @Transactional
+    void markTripCancel(Integer tripId,String cancelReason);
 
     Page<TripDto> findTrips(String search, String status, Pageable pageable);
 }

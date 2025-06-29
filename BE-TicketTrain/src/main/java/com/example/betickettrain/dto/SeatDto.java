@@ -1,6 +1,7 @@
 package com.example.betickettrain.dto;
 
 import com.example.betickettrain.entity.Seat;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,7 +21,9 @@ public class SeatDto   {
     String seatNumber;
     Seat.SeatType seatType;
     Seat.Status status;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime updatedAt;
     Double price;
     boolean booked; // true if already booked

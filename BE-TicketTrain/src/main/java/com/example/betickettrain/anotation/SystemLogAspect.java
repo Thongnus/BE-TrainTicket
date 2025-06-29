@@ -58,6 +58,7 @@ public class SystemLogAspect {
             log.debug("📘 Sent log to WebSocket: {}", logg);
 
         } catch (Exception e) {
+        //    e.printStackTrace();
             log.warn("⚠️ Failed to log action: {}", e.getMessage());
         }
     }

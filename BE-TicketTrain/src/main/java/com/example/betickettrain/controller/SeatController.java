@@ -11,23 +11,23 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/trips")
+@RequestMapping("/api/seats")
 @RequiredArgsConstructor
 public class SeatController {
     private final SeatService seatService;
 
 
-    @PostMapping("/seats")
+    @PostMapping()
     public Response<?> createSeat(@RequestBody SeatDto seatDto) {
         return new Response<>(seatService.createSeat(seatDto));
     }
 
-    @PutMapping("/seats/{seatId}")
+    @PutMapping("/{seatId}")
     public Response<?> updateSeat(@PathVariable Integer seatId, @RequestBody SeatDto seatDto) {
         return new Response<>(seatService.updateSeat(seatId, seatDto));
     }
 
-    @GetMapping("/seats")
+    @GetMapping()
     public Response<?> getAllSeats() {
         return new Response<>(seatService.getAllSeats());
     }
@@ -37,9 +37,15 @@ public class SeatController {
         return new Response<>(seatService.getSeat(seatId));
     }
 
-    @DeleteMapping("/seats/{seatId}")
+    @DeleteMapping("/{seatId}")
     public ResponseEntity<?> deleteSeat(@PathVariable Integer seatId) {
         seatService.deleteSeat(seatId);
         return ResponseEntity.ok().build();
     }
+//    @GetMapping("/paged-seats")
+//    public Response<?> getPagedSeats(
+//            @RequestParam(defaultValue = "0") Integer page,
+//            @RequestParam(defaultValue = "10") Integer size) {
+//        return new Response<>(seatService.getPagedSeats(page, size));
+//    }
 }

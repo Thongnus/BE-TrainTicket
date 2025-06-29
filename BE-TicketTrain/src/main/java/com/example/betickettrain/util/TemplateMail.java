@@ -3,6 +3,7 @@ package com.example.betickettrain.util;
 import com.example.betickettrain.dto.BookingDto;
 import com.example.betickettrain.dto.TicketDto;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -67,7 +68,8 @@ public class TemplateMail {
 
         return html.toString();
     }
-    public static String buildTripDelayHtml(String tripCode, String departureTime, int delayMinutes, String reason) {
+    public static String buildTripDelayHtml(String tripCode, LocalDateTime departureTime, int delayMinutes, String reason) {
+        String time = departureTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
         return """
         <div style='font-family:Arial,sans-serif;line-height:1.6;padding:20px;max-width:600px;margin:auto;border:1px solid #ccc;border-radius:8px;'>
             <h2 style='color:#d35400;'>THÔNG BÁO TRỄ CHUYẾN</h2>
@@ -77,20 +79,21 @@ public class TemplateMail {
             <hr>
             <p>Trân trọng,<br>Đội ngũ hỗ trợ khách hàng</p>
         </div>
-    """.formatted(tripCode, departureTime, delayMinutes, reason);
+    """.formatted(tripCode, time, delayMinutes, reason);
     }
 
-    public static String buildTripCancelHtml(String tripCode, String departureTime, String reason) {
+    public static String buildTripCancelHtml(String tripCode, LocalDateTime departureTime, String reason) {
+        String time = departureTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
         return """
         <div style='font-family:Arial,sans-serif;line-height:1.6;padding:20px;max-width:600px;margin:auto;border:1px solid #ccc;border-radius:8px;'>
             <h2 style='color:#c0392b;'>THÔNG BÁO HUỶ CHUYẾN</h2>
             <p>Chuyến tàu <strong>%s</strong> dự kiến khởi hành lúc <strong>%s</strong> đã bị <strong>huỷ</strong>.</p>
             <p><strong>Lý do:</strong> %s</p>
-            <p>Nếu bạn đã đặt vé, vui lòng truy cập hệ thống để đổi chuyến hoặc yêu cầu hoàn tiền.</p>
+            <p>Chúng tôi sẽ hoàn tiền cho bạn trong thời gian sớm nhất.</p>
             <hr>
             <p>Trân trọng,<br>Đội ngũ hỗ trợ khách hàng</p>
         </div>
-    """.formatted(tripCode, departureTime, reason);
+    """.formatted(tripCode, time, reason);
     }
 
 }
