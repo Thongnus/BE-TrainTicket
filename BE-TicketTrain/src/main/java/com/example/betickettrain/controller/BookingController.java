@@ -87,5 +87,15 @@ public class BookingController {
                     .body(Map.of("message", "Đã xảy ra lỗi khi check-in"));
         }
     }
-
+    @PostMapping("/cancel/{bookingId}")
+    @PreAuthorize("hasRole('ADMIN')") // Chỉ cho phép người dùng đã đăng nhập
+    public ResponseEntity<?> cancelBooking(@PathVariable() Integer bookingId) {
+        boolean isCancelled = bookingService.cancelBookingByAdmin(bookingId);
+        if (isCancelled) {
+            return ResponseEntity.ok(Map.of("message", "Đơn đặt vé đã được hủy thành công"));
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Không tìm thấy đơn đặt vé hoặc không thể hủy"));
+        }
+    }
 }

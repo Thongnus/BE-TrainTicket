@@ -1,5 +1,7 @@
 package com.example.betickettrain.service.ServiceImpl;
 
+import com.example.betickettrain.dto.BookingDto;
+import com.example.betickettrain.entity.Booking;
 import com.example.betickettrain.entity.Trip;
 import com.example.betickettrain.service.EmailService;
 import com.example.betickettrain.service.NotificationService;
@@ -21,4 +23,11 @@ public class NotificationServiceImpl implements NotificationService {
             emailService.sendTripStatusEmail(email, trip.getTripCode(), trip.getDepartureTime(), trip.getStatus(), trip.getDelayMinutes(), trip.getDelayReason());
         }
     }
+
+    @Override
+    public void notifyBookingCancellation(String to, Booking booking, String tripCode, String reason) {
+         emailService.sendBookingCancelEmail(to, booking, tripCode, reason);
+    }
+
+
 }

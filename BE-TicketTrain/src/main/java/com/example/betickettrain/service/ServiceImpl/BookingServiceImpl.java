@@ -1,5 +1,6 @@
 package com.example.betickettrain.service.ServiceImpl;
 
+import com.example.betickettrain.anotation.SystemLogAspect;
 import com.example.betickettrain.dto.*;
 import com.example.betickettrain.entity.*;
 import com.example.betickettrain.exceptions.ErrorCode;
@@ -7,10 +8,10 @@ import com.example.betickettrain.exceptions.SeatLockedException;
 import com.example.betickettrain.mapper.BookingMapper;
 import com.example.betickettrain.mapper.PaymentMapper;
 import com.example.betickettrain.mapper.TicketMapper;
+import com.example.betickettrain.mapper.TripMapper;
 import com.example.betickettrain.repository.*;
-import com.example.betickettrain.service.BookingService;
-import com.example.betickettrain.service.EmailService;
-import com.example.betickettrain.service.RedisSeatLockService;
+import com.example.betickettrain.service.*;
+import com.example.betickettrain.util.Constants;
 import com.example.betickettrain.util.DateUtils;
 import com.example.betickettrain.util.TemplateMail;
 import jakarta.mail.MessagingException;
@@ -18,7 +19,6 @@ import jakarta.persistence.criteria.Predicate;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -32,9 +32,10 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import static com.example.betickettrain.util.Constants.qrBaseUrl;
@@ -62,10 +63,10 @@ public class BookingServiceImpl implements BookingService {
 
     private final NotificationRepository notificationRepository;
     private final PaymentRepository paymentRepository;
-
-
-
-
+    private final TripMapper tripMapper;
+    private final NotificationService notificationService;
+    private final SystemLogRepository systemLogRepository;
+    private final SystemLogService systemLogService;
     // chưa hoàn thiện vẫn chưa fix dc race condition
     @Override
     public void lockSeats(BookingLockRequest request) {
@@ -189,16 +190,14 @@ public class BookingServiceImpl implements BookingService {
 
         } catch (Exception e) {
             // ======= Giải phóng toàn bộ ghế đã lock nếu lỗi =======
-            List<Integer> outboundSeatIds = request.getPassengerTickets().stream()
-                    .map(PassengerTicketDto::getSeatId).toList();
+            List<Integer> outboundSeatIds = request.getPassengerTickets().stream().map(PassengerTicketDto::getSeatId).toList();
             for (Integer seatId : outboundSeatIds) {
                 redisSeatLockService.unlockSeat(request.getTripId(), seatId);
             }
 
             // Unlock return seats if exists
             if (request.getReturnTripId() != null && request.getReturnPassengerTickets() != null) {
-                List<Integer> returnSeatIds = request.getReturnPassengerTickets().stream()
-                        .map(PassengerTicketDto::getSeatId).toList();
+                List<Integer> returnSeatIds = request.getReturnPassengerTickets().stream().map(PassengerTicketDto::getSeatId).toList();
                 for (Integer seatId : returnSeatIds) {
                     redisSeatLockService.unlockSeat(request.getReturnTripId(), seatId);
                 }
@@ -231,24 +230,12 @@ public class BookingServiceImpl implements BookingService {
             double ticketPrice = calculateDynamicPrice(price, trip.getDepartureTime());
             String ticketCode = generateTicketCode();
 
-            Ticket ticket = Ticket.builder().
-                    booking(booking)
-                    .trip(trip)
-                    .seat(seat)
-                    .originStation(route.getOriginStation())
-                    .destinationStation(route.getDestinationStation())
-                    .passengerName(pt.getPassengerName())
-                    .passengerIdCard(pt.getIdentityCard())
-                    .ticketPrice(ticketPrice)
-                    .ticketCode(ticketCode)
-                    .status(Ticket.Status.hold)
-                    .holdExpireTime(LocalDateTime.now().plusMinutes(15))
-                    .createdAt(LocalDateTime.now())
+            Ticket ticket = Ticket.builder().booking(booking).trip(trip).seat(seat).originStation(route.getOriginStation()).destinationStation(route.getDestinationStation()).passengerName(pt.getPassengerName()).passengerIdCard(pt.getIdentityCard()).ticketPrice(ticketPrice).ticketCode(ticketCode).status(Ticket.Status.hold).holdExpireTime(LocalDateTime.now().plusMinutes(15)).createdAt(LocalDateTime.now())
                     //  .isReturnTrip(isReturn) // bạn cần thêm field này nếu phân biệt lượt về
                     .build();
 
             Ticket t = ticketRepository.save(ticket);
-            log.debug(ticket.toString() + "TICKet");
+            log.debug(ticket + "TICKet");
             total += ticketPrice;
         }
 
@@ -306,48 +293,61 @@ public class BookingServiceImpl implements BookingService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        return bookingRepository.findAll(spec, pageable).map(bookingMapper::toDto);
+        return bookingRepository.findAll(spec, pageable).map(booking -> {
+            BookingDto dto = bookingMapper.toDto(booking);
+
+            List<Ticket> tickets = ticketRepository.findByBookingBookingId(booking.getBookingId());
+            if (!tickets.isEmpty()) {
+                dto.setTicketCount(tickets.size());
+                TripDto tripDto = tripMapper.toDto(tickets.get(0).getTrip());
+                dto.setTripDto(tripDto);
+            }
+
+            return dto;
+        });
     }
 
     //chua toi uu
     @Override
     public List<BookingHistoryDTO> getBookingHistorybyUser(Long userId) {
+        List<Booking> bookings = bookingRepository.findAllByUser_UserId(userId);
 
-        List<BookingHistoryDTO> bookingHistoryDTOs = new ArrayList<>();
-        List<Booking> booking = bookingRepository.findAllByUser_UserId(userId);
+        // Thread pool dùng cho xử lý song song
+        Executor executor = Executors.newFixedThreadPool(10); // Có thể tùy chỉnh theo CPU core
 
-        for (Booking b : booking) {
-            BookingHistoryDTO bookingHistoryDTO = new BookingHistoryDTO();
+        List<CompletableFuture<BookingHistoryDTO>> futures = bookings.stream().map(b -> CompletableFuture.supplyAsync(() -> {
             List<TicketDto> tickets = ticketRepository.findByBookingBookingId(b.getBookingId()).stream().map(ticketMapper::toDto).toList();
-            List<PassengerTicketDto> passengerTicketDtos = new ArrayList<>();
-            for (TicketDto ticketDto : tickets) {
-                passengerTicketDtos.add(new PassengerTicketDto(ticketDto.getSeat().getSeatId(), ticketDto.getPassengerName(), ticketDto.getPassengerIdCard()));
-            }
+
+            List<PassengerTicketDto> passengerTicketDtos = tickets.stream().map(ticketDto -> new PassengerTicketDto(ticketDto.getSeat().getSeatId(), ticketDto.getPassengerName(), ticketDto.getPassengerIdCard())).toList();
+
             PaymentDto payment = paymentMapper.toDto(paymentRepository.findByBooking_BookingId(b.getBookingId()));
-            bookingHistoryDTO.setBookingId(b.getBookingId());
-            bookingHistoryDTO.setBookingCode(b.getBookingCode());
-            bookingHistoryDTO.setBookingStatus(b.getBookingStatus().toString());
-            bookingHistoryDTO.setTotalAmount(b.getTotalAmount());
-            bookingHistoryDTO.setCreatedAt(b.getCreatedAt());
-            bookingHistoryDTO.setPayment(payment);
-            bookingHistoryDTO.setTrip(tickets.get(0).getTrip());
-            bookingHistoryDTO.setPassengers(passengerTicketDtos);
-            bookingHistoryDTOs.add(bookingHistoryDTO);
-        }
-        return bookingHistoryDTOs;
+
+            BookingHistoryDTO dto = new BookingHistoryDTO();
+            dto.setBookingId(b.getBookingId());
+            dto.setBookingCode(b.getBookingCode());
+            dto.setBookingStatus(b.getBookingStatus().toString());
+            dto.setTotalAmount(b.getTotalAmount());
+            dto.setCreatedAt(b.getCreatedAt());
+            dto.setPayment(payment);
+            dto.setTrip(!tickets.isEmpty() ? tickets.get(0).getTrip() : null);
+            dto.setPassengers(passengerTicketDtos);
+
+            return dto;
+        }, executor)).toList();
+
+        // Đợi tất cả futures hoàn thành và thu kết quả
+        return futures.stream().map(CompletableFuture::join).toList();
     }
 
     @Override
     public BookingDto findBookingByBookingCode(String bookingCode) {
-        return bookingRepository.findByBookingCode(bookingCode)
-                .map(bookingMapper::toDto)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with code: " + bookingCode));
+        return bookingRepository.findByBookingCode(bookingCode).map(bookingMapper::toDto).orElseThrow(() -> new ResourceNotFoundException("Booking not found with code: " + bookingCode));
     }
 
     @Override
     public void markTicketsCheckedIn(Integer bookingId) {
         List<Ticket> tickets = ticketRepository.findAllByBookingBookingId(bookingId);
-        if(tickets==null || tickets.isEmpty()) {
+        if (tickets == null || tickets.isEmpty()) {
             throw new ResourceNotFoundException("No tickets found for booking ID: " + bookingId);
         }
         for (Ticket ticket : tickets) {
@@ -478,14 +478,8 @@ public class BookingServiceImpl implements BookingService {
             ticketRepository.saveAll(tickets);
 
             // Tạo bản ghi Payment
-            Payment payment = Payment.builder()
-                    .booking(booking)
-                    .paymentAmount(booking.getTotalAmount())
-                    .paymentMethod(booking.getPaymentMethod())
-                    .transactionId("VNPAY_" + booking.getBookingCode()) // hoặc lấy transactionId từ callback
-                    .status(Payment.Status.completed)
-                    .paymentDetails("{\"gateway\": \"VNPAY\", \"responseCode\": \"00\"}")
-                    .build();
+            Payment payment = Payment.builder().booking(booking).paymentAmount(booking.getTotalAmount()).paymentMethod(booking.getPaymentMethod()).transactionId("VNPAY_" + booking.getBookingCode()) // hoặc lấy transactionId từ callback
+                    .status(Payment.Status.completed).paymentDetails("{\"gateway\": \"VNPAY\", \"responseCode\": \"00\"}").build();
 
             paymentRepository.save(payment);
             // Giải phóng lock ghế (vì đã book thành công)
@@ -537,14 +531,7 @@ public class BookingServiceImpl implements BookingService {
             rollbackPromotionUsage(booking);
 
             // ✅ Lưu bản ghi Payment thất bại
-            Payment payment = Payment.builder()
-                    .booking(booking)
-                    .paymentAmount(booking.getTotalAmount())
-                    .paymentMethod(booking.getPaymentMethod())
-                    .transactionId("VNPAY_" + booking.getBookingCode())
-                    .status(Payment.Status.failed)
-                    .paymentDetails("{\"gateway\": \"VNPAY\", \"responseCode\": \"" + responseCode + "\"}")
-                    .build();
+            Payment payment = Payment.builder().booking(booking).paymentAmount(booking.getTotalAmount()).paymentMethod(booking.getPaymentMethod()).transactionId("VNPAY_" + booking.getBookingCode()).status(Payment.Status.failed).paymentDetails("{\"gateway\": \"VNPAY\", \"responseCode\": \"" + responseCode + "\"}").build();
 
             paymentRepository.save(payment);
 
@@ -605,12 +592,7 @@ public class BookingServiceImpl implements BookingService {
     public void updateNotificationWithEmailSuccess(BookingDto booking) {
         try {
             // Tìm notification của booking này
-            List<Notification> notifications = notificationRepository
-                    .findByUserUserIdAndRelatedIdAndNotificationType(
-                            booking.getUser().getUserId(),
-                            booking.getBookingId(),
-                            Notification.NotificationType.booking
-                    );
+            List<Notification> notifications = notificationRepository.findByUserUserIdAndRelatedIdAndNotificationType(booking.getUser().getUserId(), booking.getBookingId(), Notification.NotificationType.booking);
 
             if (!notifications.isEmpty()) {
                 Notification notification = notifications.get(0);
@@ -628,8 +610,7 @@ public class BookingServiceImpl implements BookingService {
     public void sendBookingConfirmationEmail(Booking booking) throws MessagingException {
 
         // Truy xuất đầy đủ dữ liệu cần trước khi vào thread mới
-        List<TicketDto> tickets = ticketRepository.findByBookingBookingId(booking.getBookingId())
-                .stream().map(ticketMapper::toDto).collect(Collectors.toList());
+        List<TicketDto> tickets = ticketRepository.findByBookingBookingId(booking.getBookingId()).stream().map(ticketMapper::toDto).collect(Collectors.toList());
 
         BookingDto bookingDto = bookingMapper.toDto(booking);
         String bookingCode = booking.getBookingCode(); // sẵn booking code
@@ -639,10 +620,10 @@ public class BookingServiceImpl implements BookingService {
             try {
                 if (bookingDto.getContactEmail() != null) {
                     String subject = "Xác nhận đặt vé tàu - Mã booking: " + bookingCode;
-                //    String emailContent = buildEmailContent(bookingDto, tickets);
-                            String emailContent = TemplateMail.buildEmailHtmlContent(bookingDto,tickets);
+                    //    String emailContent = buildEmailContent(bookingDto, tickets);
+                    String emailContent = TemplateMail.buildEmailHtmlContent(bookingDto, tickets);
                     //test send mail with qr
-                    BufferedImage qrImage = generateQRCodeImage(qrBaseUrl+booking.getBookingCode());
+                    BufferedImage qrImage = generateQRCodeImage(qrBaseUrl + booking.getBookingCode());
                     byte[] qrBytes = bufferedImageToByteArray(qrImage, "PNG");
                     emailService.sendEmailWithQRCode(booking.getContactEmail(), "Thông tin vé tàu của bạn", emailContent, qrBytes);
                     //   emailService.sendEmail(userEmail, subject, emailContent);
@@ -710,4 +691,44 @@ public class BookingServiceImpl implements BookingService {
             log.error("Error in processExpiredHoldBookings", e);
         }
     }
+
+    @Transactional
+    @Override
+    public boolean cancelBookingByAdmin(Integer bookingId) {
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking" + bookingId));
+
+        if (booking.getBookingStatus() == Booking.BookingStatus.cancelled || booking.getBookingStatus() == Booking.BookingStatus.completed) {
+            return false; // Không được huỷ nếu đã hoàn tất
+        }
+
+        // Cập nhật trạng thái Booking
+        booking.setBookingStatus(Booking.BookingStatus.cancelled);
+        bookingRepository.save(booking);
+
+        // Cập nhật tất cả ticket liên quan
+        List<Ticket> tickets = ticketRepository.findAllByBookingBookingId(bookingId);
+        for (Ticket ticket : tickets) {
+            ticket.setStatus(Ticket.Status.cancelled);
+        }
+        ticketRepository.saveAll(tickets);
+//        List<String> userEmails = tripRepository.findEffectiveEmailsByTripId(tickets.get(0).getTrip().getTripId());
+        notificationService.notifyBookingCancellation(booking.getContactEmail(),booking,tickets.get(0).getTrip().getTripCode(), Constants.REASON_CANCELLED);
+        Long userId= SystemLogAspect.getCurrentUserId();
+        SystemLog logg = SystemLog.builder()
+                .user(userId != null ? User.builder().userId(userId).build() : null)
+                .action(Constants.Action.UPDATE)
+                .entityType("Train")
+                .entityId(Math.toIntExact(bookingId))
+                .description("Update Status Booking: " + bookingId)
+                //  .ipAddress(request.getRemoteAddr())
+                //  .userAgent(request.getHeader("User-Agent"))
+                //   .logTime(LocalDateTime.now())
+                .build();
+
+        systemLogRepository.save(logg);
+        // log.debug("📘 Logged [{}] [{}:{}] - {}", logAction.action(), logAction.entity(), entityId, desString);
+        systemLogService.logAction(logg);
+        return true;
+    }
+
 }

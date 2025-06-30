@@ -1,6 +1,7 @@
 package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.dto.BookingDto;
+import com.example.betickettrain.entity.Booking;
 import com.example.betickettrain.entity.FailedEmailLog;
 import com.example.betickettrain.entity.Notification;
 import com.example.betickettrain.entity.Trip;
@@ -222,5 +223,37 @@ public class EmailServiceImpl implements EmailService {
         failedEmailLogRepository.save(log);
     }
 
+    @Async("emailExecutor")
+    @Retryable(
+            value = {MailException.class, MessagingException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 2000, multiplier = 2)
+    )
+    @Override
+    public void sendBookingCancelEmail(String to, Booking booking, String tripCode , String reason) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject("❌ Xác nhận huỷ vé: " + booking.getBookingCode());
+
+            // Nội dung HTML (dùng template riêng nếu có)
+            String content = TemplateMail.buildBookingCancelHtml(
+                    booking.getBookingCode(),
+                    tripCode,
+                    booking.getBookingDate(),
+                    reason
+            );
+
+            helper.setText(content, true);
+            mailSender.send(message);
+            log.info("✅ Đã gửi email huỷ vé tới {}", to);
+
+        } catch (MessagingException e) {
+            log.error("❌ Gửi email huỷ vé thất bại tới {}: {}", to, e.getMessage());
+            throw new MailSendException("Gửi email huỷ vé thất bại", e);
+        }
+    }
 
 }

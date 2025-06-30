@@ -20,4 +20,6 @@ public interface BookingService {
     BookingDto findBookingByBookingCode(String bookingCode);
 
     void markTicketsCheckedIn(Integer bookingId);
+
+    boolean cancelBookingByAdmin(Integer bookingId);
 }

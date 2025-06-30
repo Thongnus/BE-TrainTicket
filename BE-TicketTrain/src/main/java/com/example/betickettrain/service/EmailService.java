@@ -38,4 +38,12 @@ public interface EmailService {
 
 
     void sendTripStatusEmail(String to, String tripCode, LocalDateTime departureTime, Trip.Status status, Integer delayMinutes, String reason);
+
+    @Async("emailExecutor")
+    @Retryable(
+            value = {MailException.class, MessagingException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 2000, multiplier = 2)
+    )
+    void sendBookingCancelEmail(String to, Booking booking,String tripCode, String reason);
 }

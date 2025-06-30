@@ -54,4 +54,25 @@ public final class Constants {
 
         public static final String CACHE_CARRIAGE_WITH_SEATS = "carriage_with_seats";
     }
+    public static final class Ticket {
+        public static final String TICKET_NOT_FOUND = "Ticket not found";
+        public static final String TICKET_CREATED = "Ticket created";
+        public static final String TICKET_UPDATED = "Ticket updated";
+        public static final String TICKET_DELETED = "Ticket deleted";
+        public static final String TICKET_STATUS_BOOKED = "booked";
+        public static final String TICKET_STATUS_CHECKED_IN = "checked_in";
+        public static final String TICKET_STATUS_USED = "used";
+        public static final String TICKET_STATUS_CANCELLED = "cancelled";
+    }
+    public static final class Booking {
+        public static final String BOOKING_NOT_FOUND = "Booking not found";
+        public static final String BOOKING_CREATED = "Booking created";
+        public static final String BOOKING_UPDATED = "Booking updated";
+        public static final String BOOKING_DELETED = "Booking deleted";
+        public static final String BOOKING_STATUS_PENDING = "pending";
+        public static final String BOOKING_STATUS_CONFIRMED = "confirmed";
+        public static final String BOOKING_STATUS_CANCELLED = "cancelled";
+        public static final String BOOKING_STATUS_COMPLETED = "completed";
+    }
+    public static final String REASON_CANCELLED = "Hủy vé bởi quản lý do vi phạm quy định";
 }

@@ -95,5 +95,21 @@ public class TemplateMail {
         </div>
     """.formatted(tripCode, time, reason);
     }
+    public static String buildBookingCancelHtml(String bookingCode, String tripCode, LocalDateTime bookingDate, String reason) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        return """
+        <html>
+        <body>
+            <h3>Huỷ vé thành công</h3>
+            <p>Chúng tôi xác nhận bạn đã huỷ đơn đặt vé có mã <strong>%s</strong>.</p>
+            <p><strong>Mã chuyến:</strong> %s</p>
+            <p><strong>Ngày đặt:</strong> %s</p>
+            <p><strong>Lý do huỷ:</strong> %s</p>
+            <p>Nếu bạn cần hỗ trợ thêm, vui lòng liên hệ bộ phận CSKH.</p>
+            <p>Xin cảm ơn!</p>
+        </body>
+        </html>
+        """.formatted(bookingCode, tripCode, bookingDate.format(formatter), reason != null ? reason : "Không rõ");
+    }
 
 }

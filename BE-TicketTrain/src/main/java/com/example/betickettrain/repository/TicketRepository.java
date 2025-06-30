@@ -73,4 +73,5 @@ public interface TicketRepository extends JpaRepository<Ticket, Integer> {
     List<Map<String, Object>> getRevenueLast6Months();
 
 
+    int countByBookingBookingId(Integer bookingBookingId);
 }

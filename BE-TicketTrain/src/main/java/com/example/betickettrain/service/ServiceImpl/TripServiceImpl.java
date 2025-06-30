@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -47,6 +48,9 @@ public class TripServiceImpl implements TripService  {
     private final HttpServletRequest request;
     private final EmailService emailService;
     private final NotificationService notificationService;
+    private final TicketRepository ticketRepository;
+    private final BookingRepository bookingRepository;
+    private final PaymentRepository paymentRepository;
     @Override
     @LogAction(action = Constants.Action.CREATE,entity = "Trip", description = " Create a trip")
     @Transactional
@@ -241,7 +245,7 @@ public class TripServiceImpl implements TripService  {
 
         // cần add thêm batch job đ ể thông báo đến người dùng đã đặt vé trên chuyến tàu này
     }
-
+    @Transactional
     @Override
     public void markTripCancel(Integer tripId, String cancelReason) {
         Trip trip = tripRepository.findById(tripId)
@@ -250,6 +254,37 @@ public class TripServiceImpl implements TripService  {
         trip.setStatus(Trip.Status.cancelled);
         trip.setCancelledReason(cancelReason);
        Trip saveTrip = tripRepository.save(trip);
+        // 2. Huỷ tất cả vé liên quan
+        List<Ticket> affectedTickets = ticketRepository.findAllByTrip_TripId(tripId);
+        for (Ticket ticket : affectedTickets) {
+            ticket.setStatus(Ticket.Status.cancelled);
+        }
+        ticketRepository.saveAll(affectedTickets);
+
+        // 3. Cập nhật booking liên quan
+        Set<Booking> affectedBookings = affectedTickets.stream()
+                .map(Ticket::getBooking)
+                .collect(Collectors.toSet());
+
+        List<Payment> paymentsToUpdate = new ArrayList<>();
+        for (Booking booking : affectedBookings) {
+            booking.setBookingStatus(Booking.BookingStatus.cancelled);
+
+            if (booking.getPaymentStatus() == Booking.PaymentStatus.paid) {
+                booking.setPaymentStatus(Booking.PaymentStatus.refund_pending);
+
+                // Tìm các thanh toán liên quan để cập nhật trạng thái
+                List<Payment> payments = paymentRepository.findByBooking_BookingId(booking.getBookingId());
+                for (Payment payment : payments) {
+                    if (payment.getStatus() == Payment.Status.completed) {
+                        payment.setStatus(Payment.Status.refund_pending);
+                        paymentsToUpdate.add(payment);
+                    }
+                }
+            }
+        }
+        bookingRepository.saveAll(affectedBookings);
+        paymentRepository.saveAll(paymentsToUpdate);
         // Ghi log hệ thống
         SystemLog logg = SystemLog.builder()
                 .user(utils.getUser())

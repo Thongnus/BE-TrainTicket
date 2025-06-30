@@ -19,11 +19,13 @@ import java.time.LocalDateTime;
 public class BookingDto implements Serializable {
     Integer bookingId;
     String bookingCode;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime bookingDate;
     Double totalAmount;
     Booking.PaymentStatus paymentStatus;
     Booking.BookingStatus bookingStatus;
     Booking.PaymentMethod paymentMethod;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime paymentDate;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime createdAt;
@@ -32,5 +34,6 @@ public class BookingDto implements Serializable {
     private UserDto user;
     String contactEmail;
     String contactPhone;
-
+    TripDto tripDto;
+    Integer ticketCount;
 }

@@ -56,8 +56,15 @@ public class Payment {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+    @Column(name = "refunded_at")
+    @CreationTimestamp
+    @UpdateTimestamp
+    private LocalDateTime refundedAt;
+    @Column(name = "refund_request_at")
+    private LocalDateTime refundRequestAt;
+
 
     public enum Status {
-        pending, completed, failed, refunded
+        pending, completed, failed, refund_requested, refund_pending, refunded
     }
 }
