@@ -2,6 +2,9 @@ package com.example.betickettrain.util;
 
 import com.example.betickettrain.dto.BookingDto;
 import com.example.betickettrain.dto.TicketDto;
+import com.example.betickettrain.entity.Booking;
+import com.example.betickettrain.entity.RefundPolicy;
+import com.example.betickettrain.entity.Ticket;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -110,6 +113,92 @@ public class TemplateMail {
         </body>
         </html>
         """.formatted(bookingCode, tripCode, bookingDate.format(formatter), reason != null ? reason : "Không rõ");
+    }
+    public static String buildRefundRequestHtml(Booking booking, List<Ticket> tickets, double refundAmount, RefundPolicy policy) {
+        StringBuilder html = new StringBuilder();
+
+        html.append("<div style='font-family: Arial,sans-serif; padding: 20px; max-width:600px; margin:auto;'>");
+        html.append("<h2 style='text-align:center;'>Yêu cầu hoàn vé đã được ghi nhận</h2>");
+        html.append("<p><strong>Mã booking:</strong> ").append(booking.getBookingCode()).append("</p>");
+        html.append("<p><strong>Ngày đặt:</strong> ").append(booking.getBookingDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))).append("</p>");
+
+        html.append("<hr><h3>Danh sách vé yêu cầu hoàn</h3>");
+        for (Ticket ticket : tickets) {
+            html.append("<div style='margin-bottom:10px;'>");
+            html.append("<p><strong>Hành khách:</strong> ").append(ticket.getPassengerName()).append("</p>");
+            html.append("<p><strong>Chuyến:</strong> ").append(ticket.getTrip().getTripCode()).append(" | Tàu: ").append(ticket.getTrip().getTrain().getTrainNumber()).append("</p>");
+            html.append("<p>Toa: ").append(ticket.getSeat().getCarriage().getCarriageNumber()).append(" | Ghế: ").append(ticket.getSeat().getSeatNumber()).append("</p>");
+            html.append("<p>Giá vé: ").append(String.format("%,.0f VNĐ", ticket.getTicketPrice())).append("</p>");
+            html.append("</div>");
+        }
+
+        html.append("<hr><h3>Thông tin hoàn tiền</h3>");
+        html.append("<p><strong>Chính sách áp dụng:</strong> ").append(policy.getPolicyName()).append("</p>");
+        html.append("<p><strong>Tỷ lệ hoàn:</strong> ").append(policy.getRefundPercent()).append("%</p>");
+        html.append("<p><strong>Số tiền dự kiến hoàn:</strong> ").append(String.format("%,.0f VNĐ", refundAmount)).append("</p>");
+
+        html.append("<p style='margin-top:20px;'>Chúng tôi sẽ xử lý yêu cầu và hoàn tiền trong thời gian sớm nhất.</p>");
+        html.append("<p>Trân trọng,<br>Đội ngũ hỗ trợ khách hàng</p>");
+        html.append("</div>");
+
+        return html.toString();
+    }
+    public static String buildRefundApprovedHtml(Booking booking, List<TicketDto> tickets, double refundAmount) {
+        StringBuilder html = new StringBuilder();
+
+        html.append("<div style='font-family: Arial,sans-serif; padding: 20px; max-width:600px; margin:auto;'>");
+        html.append("<h2 style='text-align:center; color: green;'>Yêu cầu hoàn vé đã được duyệt</h2>");
+        html.append("<p><strong>Mã booking:</strong> ").append(booking.getBookingCode()).append("</p>");
+        html.append("<p><strong>Ngày đặt:</strong> ").append(booking.getBookingDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))).append("</p>");
+
+        html.append("<hr><h3>Chi tiết vé hoàn</h3>");
+        for (TicketDto ticket : tickets) {
+            html.append("<div style='margin-bottom:10px;'>");
+            html.append("<p><strong>Hành khách:</strong> ").append(ticket.getPassengerName()).append("</p>");
+            html.append("<p>Chuyến: ").append(ticket.getTrip().getTripCode()).append(" | Tàu: ").append(ticket.getTrip().getTrain().getTrainNumber()).append("</p>");
+            html.append("<p>Toa: ").append(ticket.getSeat().getCarriage().getCarriageNumber())
+                    .append(" | Ghế: ").append(ticket.getSeat().getSeatNumber()).append("</p>");
+            html.append("<p>Giá vé: ").append(String.format("%,.0f VNĐ", ticket.getTicketPrice())).append("</p>");
+            html.append("</div>");
+        }
+
+        html.append("<hr><h3>Hoàn tiền</h3>");
+        html.append("<p><strong>Số tiền đã được hoàn:</strong> ").append(String.format("%,.0f VNĐ", refundAmount)).append("</p>");
+        html.append("<p>Vui lòng kiểm tra tài khoản/thẻ thanh toán để xác nhận.</p>");
+
+        html.append("<p style='margin-top:20px;'>Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi.</p>");
+        html.append("<p>Trân trọng,<br>Đội ngũ hỗ trợ khách hàng</p>");
+        html.append("</div>");
+
+        return html.toString();
+    }
+    public static String buildRefundRejectedHtml(Booking booking, List<TicketDto> tickets, String reason) {
+        StringBuilder html = new StringBuilder();
+
+        html.append("<div style='font-family: Arial,sans-serif; padding: 20px; max-width:600px; margin:auto;'>");
+        html.append("<h2 style='text-align:center; color: red;'>Yêu cầu hoàn vé bị từ chối</h2>");
+        html.append("<p><strong>Mã booking:</strong> ").append(booking.getBookingCode()).append("</p>");
+        html.append("<p><strong>Ngày đặt:</strong> ").append(booking.getBookingDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))).append("</p>");
+
+        html.append("<hr><h3>Lý do từ chối</h3>");
+        html.append("<p>").append(reason).append("</p>");
+
+        html.append("<hr><h3>Chi tiết vé</h3>");
+        for (TicketDto ticket : tickets) {
+            html.append("<div style='margin-bottom:10px;'>");
+            html.append("<p><strong>Hành khách:</strong> ").append(ticket.getPassengerName()).append("</p>");
+            html.append("<p>Chuyến: ").append(ticket.getTrip().getTripCode()).append(" | Tàu: ").append(ticket.getTrip().getTrain().getTrainNumber()).append("</p>");
+            html.append("<p>Toa: ").append(ticket.getSeat().getCarriage().getCarriageNumber())
+                    .append(" | Ghế: ").append(ticket.getSeat().getSeatNumber()).append("</p>");
+            html.append("<p>Giá vé: ").append(String.format("%,.0f VNĐ", ticket.getTicketPrice())).append("</p>");
+            html.append("</div>");
+        }
+
+        html.append("<p style='margin-top:20px;'>Nếu bạn có thắc mắc, vui lòng liên hệ bộ phận CSKH để được hỗ trợ.</p>");
+        html.append("<p>Trân trọng,<br>Đội ngũ hỗ trợ khách hàng</p>");
+        html.append("</div>");
+
+        return html.toString();
     }
 
 }

@@ -20,6 +20,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.scheduling.annotation.Async;
@@ -243,7 +244,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     // chưa tối ưu vì nêu cập nhật db fail thì exception dù user đã thanh toán . Để sau update thêm (*)
-    //@Transactional
+    @Transactional
     @Override
     public boolean handleVnPayCallback(String bookingCode, String responseCode) {
         try {
@@ -309,35 +310,61 @@ public class BookingServiceImpl implements BookingService {
 
     //chua toi uu
     @Override
-    public List<BookingHistoryDTO> getBookingHistorybyUser(Long userId) {
-        List<Booking> bookings = bookingRepository.findAllByUser_UserId(userId);
+    public Page<BookingHistoryDTO> getBookingHistorybyUser(Long userId, Pageable pageable) {
+        Page<Booking> bookings = bookingRepository.findAllByUser_UserIdAndPaymentStatusIn(
+                userId,
+                List.of(
+                        Booking.PaymentStatus.paid,
+                        Booking.PaymentStatus.refunded,
+                        Booking.PaymentStatus.cancelled
+                ),
+                pageable
+        );
 
-        // Thread pool dùng cho xử lý song song
-        Executor executor = Executors.newFixedThreadPool(10); // Có thể tùy chỉnh theo CPU core
+        Executor executor = Executors.newFixedThreadPool(10);
 
-        List<CompletableFuture<BookingHistoryDTO>> futures = bookings.stream().map(b -> CompletableFuture.supplyAsync(() -> {
-            List<TicketDto> tickets = ticketRepository.findByBookingBookingId(b.getBookingId()).stream().map(ticketMapper::toDto).toList();
+        List<BookingHistoryDTO> bookingHistoryDTOs = bookings
+                .stream()
+                .map(booking -> {
+                    List<Ticket> tickets = ticketRepository.findByBookingBookingId(booking.getBookingId());
+                    List<TicketDto> ticketDtos = tickets.stream()
+                            .map(ticketMapper::toDto)
+                            .toList();
 
-            List<PassengerTicketDto> passengerTicketDtos = tickets.stream().map(ticketDto -> new PassengerTicketDto(ticketDto.getSeat().getSeatId(), ticketDto.getPassengerName(), ticketDto.getPassengerIdCard())).toList();
+                    PaymentDto payment = paymentMapper.toDto(
+                            paymentRepository.findByBooking_BookingId(booking.getBookingId())
+                    );
 
-            PaymentDto payment = paymentMapper.toDto(paymentRepository.findByBooking_BookingId(b.getBookingId()));
+                    List<PassengerTicketDto> passengerTicketDtos = ticketDtos.stream()
+                            .map(t -> new PassengerTicketDto(
+                                    t.getSeat().getSeatId(),
+                                    t.getPassengerName(),
+                                    t.getPassengerIdCard(),
+                                    t.getSeat().getSeatNumber(),
+                                    t.getSeat().getCarriage().getCarriageNumber(),
+                                    t.getTrip().getTrain().getTrainName()
+                            ))
+                            .toList();
 
-            BookingHistoryDTO dto = new BookingHistoryDTO();
-            dto.setBookingId(b.getBookingId());
-            dto.setBookingCode(b.getBookingCode());
-            dto.setBookingStatus(b.getBookingStatus().toString());
-            dto.setTotalAmount(b.getTotalAmount());
-            dto.setCreatedAt(b.getCreatedAt());
-            dto.setPayment(payment);
-            dto.setTrip(!tickets.isEmpty() ? tickets.get(0).getTrip() : null);
-            dto.setPassengers(passengerTicketDtos);
+                    BookingHistoryDTO dto = new BookingHistoryDTO();
+                    dto.setBookingId(booking.getBookingId());
+                    dto.setBookingCode(booking.getBookingCode());
+                    dto.setBookingStatus(booking.getBookingStatus().toString());
+                    dto.setTotalAmount(booking.getTotalAmount());
+                    dto.setCreatedAt(booking.getCreatedAt());
+                    dto.setPayment(payment);
+                    dto.setTrip(!ticketDtos.isEmpty() ? ticketDtos.get(0).getTrip() : null);
+                    dto.setPassengers(passengerTicketDtos);
 
-            return dto;
-        }, executor)).toList();
+                    return dto;
+                })
+                .map(dto -> CompletableFuture.supplyAsync(() -> dto, executor))
+                .map(CompletableFuture::join)
+                .toList();
 
-        // Đợi tất cả futures hoàn thành và thu kết quả
-        return futures.stream().map(CompletableFuture::join).toList();
+        return new PageImpl<>(bookingHistoryDTOs, pageable, bookings.getTotalElements());
     }
+
 
     @Override
     public BookingDto findBookingByBookingCode(String bookingCode) {
@@ -477,9 +504,14 @@ public class BookingServiceImpl implements BookingService {
             }
             ticketRepository.saveAll(tickets);
 
-            // Tạo bản ghi Payment
-            Payment payment = Payment.builder().booking(booking).paymentAmount(booking.getTotalAmount()).paymentMethod(booking.getPaymentMethod()).transactionId("VNPAY_" + booking.getBookingCode()) // hoặc lấy transactionId từ callback
-                    .status(Payment.Status.completed).paymentDetails("{\"gateway\": \"VNPAY\", \"responseCode\": \"00\"}").build();
+            Payment payment = Payment.builder()
+                    .booking(booking)
+                    .paymentAmount(booking.getTotalAmount())
+                    .paymentMethod(booking.getPaymentMethod())
+                    .transactionId("VNPAY_" + booking.getBookingCode())
+                    .status(Payment.Status.completed)
+                    .paymentDetails("{\"gateway\": \"VNPAY\", \"responseCode\": \"00\"}")
+                    .build();
 
             paymentRepository.save(payment);
             // Giải phóng lock ghế (vì đã book thành công)
@@ -549,7 +581,7 @@ public class BookingServiceImpl implements BookingService {
      */
     public void rollbackPromotionUsage(Booking booking) {
         try {
-            List<BookingPromotion> bookingPromotions = bookingPromotionRepository.findByBookingBookingId(booking.getBookingId());
+            List<BookingPromotion> bookingPromotions = bookingPromotionRepository.findAllByBookingBookingId(booking.getBookingId());
 
             for (BookingPromotion bp : bookingPromotions) {
                 Promotion promotion = bp.getPromotion();

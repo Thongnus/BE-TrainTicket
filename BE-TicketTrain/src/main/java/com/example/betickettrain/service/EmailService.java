@@ -1,7 +1,10 @@
 package com.example.betickettrain.service;
 
 import com.example.betickettrain.dto.BookingDto;
+import com.example.betickettrain.dto.TicketDto;
 import com.example.betickettrain.entity.Booking;
+import com.example.betickettrain.entity.RefundPolicy;
+import com.example.betickettrain.entity.Ticket;
 import com.example.betickettrain.entity.Trip;
 import jakarta.mail.MessagingException;
 import org.springframework.mail.MailException;
@@ -11,6 +14,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface EmailService {
     void sendEmail(String to, String subject, String body) throws MessagingException;
@@ -46,4 +50,22 @@ public interface EmailService {
             backoff = @Backoff(delay = 2000, multiplier = 2)
     )
     void sendBookingCancelEmail(String to, Booking booking,String tripCode, String reason);
+
+    void sendRefundRequestedEmail(Booking booking, List<Ticket> tickets, double refundAmount, RefundPolicy policy);
+    @Async("emailExecutor")
+    @Retryable(
+            value = {MailException.class, MessagingException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 2000, multiplier = 2)
+    )
+    void sendRefundApprovedEmail(Booking booking, List<TicketDto> tickets, double refundAmount);
+
+    @Async("emailExecutor")
+    @Retryable(
+            value = {MailException.class, MessagingException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 2000, multiplier = 2)
+    )
+    void sendRefundRejectedEmail(Booking booking, List<TicketDto> tickets, String reason);
+
 }

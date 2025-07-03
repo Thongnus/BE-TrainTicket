@@ -11,4 +11,7 @@ public class PassengerTicketDto {
     private Integer seatId;
     private String passengerName;
     private String identityCard;
+    private String seatNumbers;
+    private String carriageNumber;
+    private String trainName;
 }

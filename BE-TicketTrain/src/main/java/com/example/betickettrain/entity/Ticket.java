@@ -74,6 +74,6 @@ public class Ticket {
     private LocalDateTime updatedAt;
 
     public enum Status {
-        hold, booked, checked_in, cancelled, used, expired
+        hold, booked, checked_in, cancelled, used, expired,pending_refund
     }
 }

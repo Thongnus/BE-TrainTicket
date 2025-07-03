@@ -81,8 +81,8 @@ public class SeatServiceImpl implements SeatService {
                 boolean isRedisLocked = redisLockedSeats.contains(seat.getSeatId());
                 boolean isBooked = seatStatuses.getOrDefault(seat.getSeatId(), null) == Ticket.Status.booked;
                 boolean isHeld = seatStatuses.getOrDefault(seat.getSeatId(), null) == Ticket.Status.hold;
-
-                seatDto.setBooked(isRedisLocked || isBooked || isHeld);
+                boolean isPendingRefund = seatStatuses.getOrDefault(seat.getSeatId(), null) == Ticket.Status.pending_refund;
+                seatDto.setBooked(isRedisLocked || isBooked || isHeld|| isPendingRefund);
                 return seatDto;
             }).toList();
 

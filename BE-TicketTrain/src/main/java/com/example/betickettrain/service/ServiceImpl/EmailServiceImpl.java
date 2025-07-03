@@ -1,10 +1,9 @@
 package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.dto.BookingDto;
-import com.example.betickettrain.entity.Booking;
-import com.example.betickettrain.entity.FailedEmailLog;
-import com.example.betickettrain.entity.Notification;
-import com.example.betickettrain.entity.Trip;
+import com.example.betickettrain.dto.TicketDto;
+import com.example.betickettrain.entity.*;
+import com.example.betickettrain.mapper.BookingMapper;
 import com.example.betickettrain.mapper.UserMapper;
 import com.example.betickettrain.repository.FailedEmailLogRepository;
 import com.example.betickettrain.repository.NotificationRepository;
@@ -28,6 +27,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -43,6 +43,9 @@ public class EmailServiceImpl implements EmailService {
 
     @Autowired
     private FailedEmailLogRepository failedEmailLogRepository;
+    @Autowired
+    private BookingMapper bookingMapper;
+
     @Override
     public void sendEmail(String to, String subject, String body) {
         try {
@@ -256,4 +259,67 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-}
+    @Override
+    public void sendRefundRequestedEmail(Booking booking, List<Ticket> tickets, double refundAmount, RefundPolicy policy) {
+
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+                helper.setTo(booking.getContactEmail());
+                helper.setSubject("🔁 Yêu cầu hoàn vé - " + booking.getBookingCode());
+
+                String htmlContent = TemplateMail.buildRefundRequestHtml(booking, tickets, refundAmount, policy);
+                helper.setText(htmlContent, true);
+
+                mailSender.send(message);
+                log.info("✅ Đã gửi email xác nhận yêu cầu hoàn vé cho booking {}", booking.getBookingCode());
+
+            } catch (MessagingException e) {
+                log.error("❌ Gửi email hoàn vé thất bại: {}", e.getMessage());
+                throw new MailSendException("Gửi email hoàn vé thất bại", e);
+            }
+    }
+    @Override
+    public void sendRefundApprovedEmail(Booking booking, List<TicketDto> tickets, double refundAmount) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(booking.getContactEmail());
+            helper.setSubject("✅ Yêu cầu hoàn vé đã được duyệt - " + booking.getBookingCode());
+            BookingDto bookingDto = bookingMapper.toDto(booking);
+
+            String htmlContent = TemplateMail.buildRefundApprovedHtml(booking, tickets, refundAmount);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+            log.info("✅ Đã gửi email duyệt hoàn vé cho booking {}", booking.getBookingCode());
+
+        } catch (MessagingException e) {
+            log.error("❌ Gửi email duyệt hoàn vé thất bại: {}", e.getMessage());
+            throw new MailSendException("Gửi email duyệt hoàn vé thất bại", e);
+        }
+    }
+
+
+    @Override
+    public void sendRefundRejectedEmail(Booking booking, List<TicketDto> tickets, String reason) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(booking.getContactEmail());
+            helper.setSubject("❌ Yêu cầu hoàn vé bị từ chối - " + booking.getBookingCode());
+
+            String htmlContent = TemplateMail.buildRefundRejectedHtml(booking, tickets, reason);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+            log.info("✅ Đã gửi email từ chối hoàn vé cho booking {}", booking.getBookingCode());
+
+        } catch (MessagingException e) {
+            log.error("❌ Gửi email từ chối hoàn vé thất bại: {}", e.getMessage());
+            throw new MailSendException("Gửi email từ chối hoàn vé thất bại", e);
+        }
+}}

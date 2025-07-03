@@ -3,12 +3,15 @@ package com.example.betickettrain.repository;
 
 import com.example.betickettrain.dto.BookingDto;
 import com.example.betickettrain.entity.Booking;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,8 +19,7 @@ public interface BookingRepository extends JpaRepository<Booking, Integer>, JpaS
     Optional<Booking> findByBookingCode(String bookingCode);
 
 
-    List<Booking> findAllByUser_UserId(Long userUserId);
-
+    Page<Booking> findAllByUser_UserIdAndPaymentStatusIn(Long userId, List<Booking.PaymentStatus> statuses, Pageable pageable);
 
     @Query("SELECT COALESCE(SUM(b.totalAmount), 0) FROM Booking b WHERE b.paymentStatus = 'paid' AND b.bookingDate BETWEEN :start AND :end")
     double sumRevenue(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);

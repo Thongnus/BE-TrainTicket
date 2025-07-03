@@ -75,6 +75,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Response<Void> handleGenericException(Exception ex) {
+
         log.error("Unhandled exception", ex);
         return Response.error(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),

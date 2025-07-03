@@ -56,12 +56,14 @@ public class BookingController {
     }
 
     @GetMapping("/history")
-    public ResponseEntity<List<BookingHistoryDTO>> getBookingHistory(@AuthenticationPrincipal User user) {
-        List<BookingHistoryDTO> bookings = bookingService.getBookingHistorybyUser(user.getUserId());
+    public ResponseEntity<Page<BookingHistoryDTO>> getBookingHistory(
+            @AuthenticationPrincipal User user,
+            @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        Page<BookingHistoryDTO> bookings = bookingService.getBookingHistorybyUser(user.getUserId(), pageable);
         return ResponseEntity.ok(bookings);
-
-
     }
+
     @GetMapping("/checkin")
     @PreAuthorize("hasRole('ADMIN')") // Chỉ cho phép người dùng đã đăng nhập
     //tam thoi chua build 1 app rieng gianh cho viec check-in nên tạm thòi quét thì tự động xác nhận check-in

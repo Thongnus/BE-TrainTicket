@@ -271,10 +271,9 @@ public class TripServiceImpl implements TripService  {
             booking.setBookingStatus(Booking.BookingStatus.cancelled);
 
             if (booking.getPaymentStatus() == Booking.PaymentStatus.paid) {
-                booking.setPaymentStatus(Booking.PaymentStatus.refund_pending);
 
                 // Tìm các thanh toán liên quan để cập nhật trạng thái
-                List<Payment> payments = paymentRepository.findByBooking_BookingId(booking.getBookingId());
+                List<Payment> payments = paymentRepository.findAllByBooking_BookingId(booking.getBookingId());
                 for (Payment payment : payments) {
                     if (payment.getStatus() == Payment.Status.completed) {
                         payment.setStatus(Payment.Status.refund_pending);

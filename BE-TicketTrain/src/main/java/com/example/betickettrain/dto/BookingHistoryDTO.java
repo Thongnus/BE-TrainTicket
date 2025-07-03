@@ -23,5 +23,4 @@ public class BookingHistoryDTO {
     private List<PassengerTicketDto> passengers;
     private PaymentDto payment;
 
-
 }

@@ -15,7 +15,10 @@ public interface BookingService {
 
     Page<BookingDto> findBookings(String search, String bookingStatus, String paymentStatus, Pageable pageable);
 
-    List<BookingHistoryDTO>  getBookingHistorybyUser(Long userId);
+//    List<BookingHistoryDTO>  getBookingHistorybyUser(Long userId);
+
+    //chua toi uu
+    Page<BookingHistoryDTO> getBookingHistorybyUser(Long userId, Pageable pageable);
 
     BookingDto findBookingByBookingCode(String bookingCode);
 
