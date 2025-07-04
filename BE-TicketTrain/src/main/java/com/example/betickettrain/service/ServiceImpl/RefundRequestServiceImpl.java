@@ -1,6 +1,8 @@
 package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.dto.RefundRequestDto;
+import com.example.betickettrain.dto.RefundStatisticsDto;
+import com.example.betickettrain.dto.RefundStatisticsProjection;
 import com.example.betickettrain.dto.TicketDto;
 import com.example.betickettrain.entity.*;
 import com.example.betickettrain.exceptions.BusinessException;
@@ -22,7 +24,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -30,7 +31,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -133,20 +133,37 @@ public class RefundRequestServiceImpl implements RefundRequestService {
 
 
     @Override
-    public Page<RefundRequestDto> getRefundRequests(String search, LocalDateTime fromDate, LocalDateTime toDate, Pageable pageable) {
+    public Page<RefundRequestDto> getRefundRequests(String search, String status,
+                                                    LocalDateTime fromDate, LocalDateTime toDate,
+                                                    Pageable pageable) {
         Specification<RefundRequest> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
+            // 🔍 Search theo bookingCode, email, phone
             if (search != null && !search.isBlank()) {
                 String pattern = "%" + search.toLowerCase() + "%";
                 Join<RefundRequest, Booking> bookingJoin = root.join("booking");
-                predicates.add(cb.or(
+
+                Predicate textPredicate = cb.or(
                         cb.like(cb.lower(bookingJoin.get("bookingCode")), pattern),
                         cb.like(cb.lower(bookingJoin.get("contactEmail")), pattern),
                         cb.like(cb.lower(bookingJoin.get("contactPhone")), pattern)
-                ));
+                );
+
+                predicates.add(textPredicate);
             }
 
+            // ✅ Filter theo status riêng biệt
+            if (status != null && !status.isBlank()) {
+                try {
+                    RefundRequest.RefundStatus enumStatus = RefundRequest.RefundStatus.valueOf(status.toLowerCase());
+                    predicates.add(cb.equal(root.get("status"), enumStatus));
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Trạng thái không hợp lệ: " + status);
+                }
+            }
+
+            // ⏰ Filter theo ngày
             if (fromDate != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("requestDate"), fromDate));
             }
@@ -160,7 +177,7 @@ public class RefundRequestServiceImpl implements RefundRequestService {
 
         Page<RefundRequest> result = refundRequestRepository.findAll(spec, pageable);
 
-        // 👉 Map sang DTO và bổ sung thông tin chuyến
+        // 🧠 Map sang DTO
         List<RefundRequestDto> dtoList = result.getContent().stream().map(refundRequest -> {
             RefundRequestDto dto = refundRequestMapper.toDto(refundRequest);
 
@@ -180,6 +197,7 @@ public class RefundRequestServiceImpl implements RefundRequestService {
 
         return new PageImpl<>(dtoList, pageable, result.getTotalElements());
     }
+
 
     @Override
     public RefundRequestDto getRefundRequestById(Long refundRequestId) {
@@ -288,5 +306,19 @@ public class RefundRequestServiceImpl implements RefundRequestService {
         // Gửi email từ chối
         emailService.sendRefundRejectedEmail(booking, ticketDtoList, reason);
     }
+    @Override
+    public RefundStatisticsDto getRefundStatistics() {
+        RefundStatisticsProjection projection = refundRequestRepository.getRefundStatisticsProjection();
+
+        return new RefundStatisticsDto(
+                projection.getTotalRequests(),
+                projection.getTotalRefundAmount(),
+                projection.getApprovedCount(),
+                projection.getRejectedCount(),
+                projection.getPendingCount()
+        );
+    }
+
+
 
 }

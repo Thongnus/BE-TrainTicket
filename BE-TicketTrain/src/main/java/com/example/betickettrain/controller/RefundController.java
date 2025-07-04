@@ -1,6 +1,7 @@
 package com.example.betickettrain.controller;
 
 import com.example.betickettrain.dto.RefundRequestDto;
+import com.example.betickettrain.dto.RefundStatisticsDto;
 import com.example.betickettrain.dto.Response;
 import com.example.betickettrain.entity.Booking;
 import com.example.betickettrain.service.RefundPolicyService;
@@ -31,17 +32,19 @@ public class RefundController {
     @GetMapping("/requests")
     public Response<?> getRefundRequests(
             @RequestParam(defaultValue = "") String search,
+            @RequestParam(required = false) String status, // ✅ thêm dòng này
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "5") int size
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("updatedAt").descending());
 
-        Page<RefundRequestDto> pageResult = requestRefundBooking.getRefundRequests(search, fromDate, toDate, pageable);
+        Page<RefundRequestDto> pageResult = requestRefundBooking.getRefundRequests(search, status, fromDate, toDate, pageable);
 
         return Response.of(pageResult);
     }
+
     @GetMapping("/{refundRequestId}")
     public Response<?> getRefundRequestById(@PathVariable Long refundRequestId) {
         RefundRequestDto dto = requestRefundBooking.getRefundRequestById(refundRequestId);
@@ -60,5 +63,11 @@ public class RefundController {
         requestRefundBooking.rejectRefundRequest(refundRequestId, reason);
         return ResponseEntity.ok("Yêu cầu hoàn tiền #" + refundRequestId + " đã bị từ chối.");
     }
+    @GetMapping("/statistics")
+    public Response<RefundStatisticsDto> getRefundStatistics() {
+        RefundStatisticsDto stats = requestRefundBooking.getRefundStatistics();
+        return Response.of(stats);
+    }
+
 
 }

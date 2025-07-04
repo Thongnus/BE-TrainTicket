@@ -81,6 +81,6 @@ public class RefundRequest {
     private LocalDateTime updatedAt;
 
     public enum RefundStatus {
-        pending, approved, rejected
+            pending, approved, rejected
     }
 }
