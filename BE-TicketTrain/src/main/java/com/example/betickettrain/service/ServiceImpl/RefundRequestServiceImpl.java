@@ -84,6 +84,7 @@ public class RefundRequestServiceImpl implements RefundRequestService {
         double refundAmount = 0;
         double netAmount=0;
         double totalDiscount=0;
+
         if(bookingPromotion!= null) {
              totalDiscount = bookingPromotion.getDiscountAmount();
             if (totalDiscount < 0 || totalDiscount > totalTicketPrice) {

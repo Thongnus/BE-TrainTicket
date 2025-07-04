@@ -274,7 +274,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public Page<BookingDto> findBookings(String search, String bookingStatus, String paymentStatus, Pageable pageable) {
+    public Page<BookingDto> findBookings(String search, String bookingStatus, String paymentStatus, String identityCard, Pageable pageable) {
         Specification<Booking> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -298,12 +298,31 @@ public class BookingServiceImpl implements BookingService {
             BookingDto dto = bookingMapper.toDto(booking);
 
             List<Ticket> tickets = ticketRepository.findByBookingBookingId(booking.getBookingId());
-            if (!tickets.isEmpty()) {
-                dto.setTicketCount(tickets.size());
-                TripDto tripDto = tripMapper.toDto(tickets.get(0).getTrip());
-                dto.setTripDto(tripDto);
-            }
 
+            dto.setTicketCount(tickets.size());
+
+            List<PassengerTicketDto> passengerTicketDtos = new ArrayList<>();
+            TripDto tripDto = tripMapper.toDto(tickets.get(0).getTrip());
+            for (Ticket ticket : tickets) {
+                // Lọc theo CMND/CCCD nếu có
+                if (identityCard != null && !identityCard.isBlank()
+                        && !ticket.getPassengerIdCard().equalsIgnoreCase(identityCard)) {
+                    continue;
+                }
+
+                PassengerTicketDto passengerTicketDto = new PassengerTicketDto();
+                passengerTicketDto.setSeatId(
+                        ticket.getSeat().getSeatId());
+                passengerTicketDto.setPassengerName(ticket.getPassengerName());
+                passengerTicketDto.setIdentityCard(ticket.getPassengerIdCard());
+                passengerTicketDto.setSeatNumbers(ticket.getSeat().getSeatNumber());
+                passengerTicketDto.setCarriageNumber(ticket.getSeat().getCarriage().getCarriageNumber());
+                passengerTicketDto.setTrainName(ticket.getTrip().getTrain().getTrainName());
+
+                passengerTicketDtos.add(passengerTicketDto);
+            }
+            dto.setTripDto(tripDto);
+            dto.setPassengerTicketDtos(passengerTicketDtos);
             return dto;
         });
     }

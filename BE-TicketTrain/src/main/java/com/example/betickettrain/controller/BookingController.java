@@ -49,9 +49,10 @@ public class BookingController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false, defaultValue = "all") String bookingStatus,
             @RequestParam(required = false, defaultValue = "all") String paymentStatus,
+            @RequestParam(required = false) String identityCard,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Page<BookingDto> result = bookingService.findBookings(search, bookingStatus, paymentStatus, pageable);
+        Page<BookingDto> result = bookingService.findBookings(search, bookingStatus, paymentStatus,identityCard, pageable);
         return ResponseEntity.ok(result);
     }
 

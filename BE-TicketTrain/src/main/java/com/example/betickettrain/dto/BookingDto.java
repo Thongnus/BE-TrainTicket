@@ -9,7 +9,7 @@ import lombok.Value;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-
+import java.util.List;
 /**
  * DTO for {@link com.example.betickettrain.entity.Booking}
  */
@@ -36,4 +36,5 @@ public class BookingDto implements Serializable {
     String contactPhone;
     TripDto tripDto;
     Integer ticketCount;
+    List<PassengerTicketDto> passengerTicketDtos ;
 }

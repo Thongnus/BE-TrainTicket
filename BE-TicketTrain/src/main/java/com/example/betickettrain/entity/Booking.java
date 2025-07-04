@@ -68,9 +68,8 @@ public class Booking {
     private String contactPhone;
 
     public enum PaymentStatus {
-        pending, paid, refunded, cancelled
+        pending, paid, refunded, cancelled,refund_pending,refund_failed
     }
-
     public enum BookingStatus {
         pending, confirmed, pending_cancel, cancelled, refund_processing, refund_failed, completed , refunded
     }
