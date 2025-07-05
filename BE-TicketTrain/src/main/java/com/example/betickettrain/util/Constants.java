@@ -53,6 +53,7 @@ public final class Constants {
 
 
         public static final String CACHE_CARRIAGE_WITH_SEATS = "carriage_with_seats";
+        public static final String CACHE_PAYMENT = "payment";
     }
     public static final class Ticket {
         public static final String TICKET_NOT_FOUND = "Ticket not found";

@@ -1,6 +1,7 @@
 package com.example.betickettrain.dto;
 
 import com.example.betickettrain.entity.Booking;
+import com.example.betickettrain.entity.Ticket;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;

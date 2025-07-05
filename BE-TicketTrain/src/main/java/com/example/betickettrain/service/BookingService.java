@@ -13,7 +13,7 @@ public interface BookingService {
 
     boolean handleVnPayCallback(String bookingCode, String responseCode);
 
-    Page<BookingDto> findBookings(String search, String bookingStatus, String paymentStatus,String idCards, Pageable pageable);
+    Page<BookingDto> findBookings(String search, String bookingStatus, Pageable pageable);
 
 //    List<BookingHistoryDTO>  getBookingHistorybyUser(Long userId);
 

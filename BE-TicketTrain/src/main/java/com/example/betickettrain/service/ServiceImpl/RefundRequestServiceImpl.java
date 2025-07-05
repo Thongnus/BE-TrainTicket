@@ -80,20 +80,19 @@ public class RefundRequestServiceImpl implements RefundRequestService {
 
         double totalTicketPrice = tickets.stream().mapToDouble(Ticket::getTicketPrice).sum();
 
-        BookingPromotion bookingPromotion = bookingPromotionRepository.findBookingPromotionByBooking_BookingId(booking.getBookingId());
-        double refundAmount = 0;
-        double netAmount=0;
-        double totalDiscount=0;
+        double totalDiscount = 0;
+        double netAmount = totalTicketPrice;
 
-        if(bookingPromotion!= null) {
-             totalDiscount = bookingPromotion.getDiscountAmount();
+        BookingPromotion bookingPromotion = bookingPromotionRepository.findBookingPromotionByBooking_BookingId(booking.getBookingId());
+        if (bookingPromotion != null) {
+            totalDiscount = bookingPromotion.getDiscountAmount();
             if (totalDiscount < 0 || totalDiscount > totalTicketPrice) {
                 throw new BusinessException(ErrorCode.INVALID_DISCOUNT.code, "Giá trị giảm giá không hợp lệ.");
             }
-
-             netAmount = totalTicketPrice - totalDiscount;
-             refundAmount = netAmount * (policy.getRefundPercent() / 100.0);
+            netAmount = totalTicketPrice - totalDiscount;
         }
+
+        double refundAmount = netAmount * (policy.getRefundPercent() / 100.0);
 
 
         // Cập nhật trạng thái các vé

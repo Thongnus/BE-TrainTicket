@@ -3,6 +3,7 @@ package com.example.betickettrain.service.ServiceImpl;
 import com.example.betickettrain.anotation.SystemLogAspect;
 import com.example.betickettrain.dto.*;
 import com.example.betickettrain.entity.*;
+import com.example.betickettrain.exceptions.BusinessException;
 import com.example.betickettrain.exceptions.ErrorCode;
 import com.example.betickettrain.exceptions.SeatLockedException;
 import com.example.betickettrain.mapper.BookingMapper;
@@ -15,6 +16,8 @@ import com.example.betickettrain.util.Constants;
 import com.example.betickettrain.util.DateUtils;
 import com.example.betickettrain.util.TemplateMail;
 import jakarta.mail.MessagingException;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -136,26 +139,21 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public String initiateCheckout(BookingCheckoutRequest request, User user) {
-
-
         try {
             // ======= Bước 1: Lock ghế lượt đi =======
             List<Integer> outboundSeatIds = request.getPassengerTickets().stream().map(PassengerTicketDto::getSeatId).toList();
             lockSeats(new BookingLockRequest(request.getTripId(), outboundSeatIds));
 
-
             // Nếu có chiều về thì lock luôn
             if (request.getReturnTripId() != null && request.getReturnPassengerTickets() != null) {
                 List<Integer> returnSeatIds = request.getReturnPassengerTickets().stream().map(PassengerTicketDto::getSeatId).toList();
                 lockSeats(new BookingLockRequest(request.getReturnTripId(), returnSeatIds));
-
             }
 
             // ======= Bước 2: Lấy thông tin user và tạo Booking =======
             //  User userInDb = userRepository.findById(user.getUserId());
             Booking booking = new Booking();
             booking.setUser(user);
-
             booking.setContactEmail(request.getInfoEmail());
             booking.setContactPhone(request.getInfoPhone());
             booking.setBookingCode("BK" + DateUtils.toString(LocalDateTime.now()));
@@ -169,22 +167,22 @@ public class BookingServiceImpl implements BookingService {
             // ======= Bước 3: Xử lý cả lượt đi & về =======
             double totalBeforePromotion = 0.0;
 
-            totalBeforePromotion += createTicketsForTrip(request.getTripId(), request.getPassengerTickets(), booking, false // lượt đi
-            );
+            totalBeforePromotion += createTicketsForTrip(request.getTripId(), request.getPassengerTickets(), booking, false);
 
             if (request.getReturnTripId() != null && request.getReturnPassengerTickets() != null) {
-                totalBeforePromotion += createTicketsForTrip(request.getReturnTripId(), request.getReturnPassengerTickets(), booking, true // lượt về
-                );
+                totalBeforePromotion += createTicketsForTrip(request.getReturnTripId(), request.getReturnPassengerTickets(), booking, true);
             }
 
-            // ======= Bước 4: Áp dụng khuyến mãi nếu có =======
             double totalAfterPromotion = totalBeforePromotion;
+
+                // Áp dụng mã giảm giá nếu có
             if (request.getPromotionCode() != null && !request.getPromotionCode().isBlank()) {
                 totalAfterPromotion = applyPromotion(booking, request.getPromotionCode(), totalBeforePromotion);
             }
 
             booking.setTotalAmount(totalAfterPromotion);
             bookingRepository.save(booking);
+
 
             // ======= Bước 5: Gửi link thanh toán =======
             return "VNPAY".equalsIgnoreCase(request.getPaymentMethod()) ? vnpayService.generatePaymentUrl(booking) : "/payment-success-local?bookingCode=" + booking.getBookingCode();
@@ -196,7 +194,6 @@ public class BookingServiceImpl implements BookingService {
                 redisSeatLockService.unlockSeat(request.getTripId(), seatId);
             }
 
-            // Unlock return seats if exists
             if (request.getReturnTripId() != null && request.getReturnPassengerTickets() != null) {
                 List<Integer> returnSeatIds = request.getReturnPassengerTickets().stream().map(PassengerTicketDto::getSeatId).toList();
                 for (Integer seatId : returnSeatIds) {
@@ -220,6 +217,7 @@ public class BookingServiceImpl implements BookingService {
         Map<Carriage.CarriageType, TicketPrice> priceMap = ticketPriceRepository.findByRouteAndCarriageTypeAndDateRange(route.getRouteId(), carriageTypes, trip.getDepartureTime().toLocalDate()).stream().collect(Collectors.toMap(TicketPrice::getCarriageType, tp -> tp));
 
         double total = 0.0;
+
         for (PassengerTicketDto pt : ticketsDto) {
             Seat seat = seatMap.get(pt.getSeatId());
             if (seat == null) throw new RuntimeException("Seat not found: " + pt.getSeatId());
@@ -235,13 +233,13 @@ public class BookingServiceImpl implements BookingService {
                     //  .isReturnTrip(isReturn) // bạn cần thêm field này nếu phân biệt lượt về
                     .build();
 
-            Ticket t = ticketRepository.save(ticket);
-            log.debug(ticket + "TICKet");
+           ticketRepository.save(ticket);
             total += ticketPrice;
         }
 
         return total;
     }
+
 
     // chưa tối ưu vì nêu cập nhật db fail thì exception dù user đã thanh toán . Để sau update thêm (*)
     @Transactional
@@ -274,23 +272,26 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public Page<BookingDto> findBookings(String search, String bookingStatus, String paymentStatus, String identityCard, Pageable pageable) {
+    public Page<BookingDto> findBookings(String search, String bookingStatus, Pageable pageable) {
         Specification<Booking> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            if (search != null && !search.isEmpty()) {
+            // Tìm theo mã booking
+            if (search != null && !search.isBlank()) {
                 String pattern = "%" + search.toLowerCase() + "%";
                 predicates.add(cb.like(cb.lower(root.get("bookingCode")), pattern));
             }
 
+            // Tìm theo trạng thái booking
             if (bookingStatus != null && !bookingStatus.equalsIgnoreCase("all")) {
-                predicates.add(cb.equal(root.get("bookingStatus"), Booking.BookingStatus.valueOf(bookingStatus.toLowerCase())));
+                try {
+                    Booking.BookingStatus statusEnum = Booking.BookingStatus.valueOf(bookingStatus.toLowerCase());
+                    predicates.add(cb.equal(root.get("bookingStatus"), statusEnum));
+                } catch (IllegalArgumentException ignored) {
+                    // Nếu không hợp lệ thì bỏ qua
+                }
             }
-
-            if (paymentStatus != null && !paymentStatus.equalsIgnoreCase("all")) {
-                predicates.add(cb.equal(root.get("paymentStatus"), Booking.PaymentStatus.valueOf(paymentStatus.toLowerCase())));
-            }
-
+            
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
@@ -301,18 +302,13 @@ public class BookingServiceImpl implements BookingService {
 
             dto.setTicketCount(tickets.size());
 
+            // Lấy danh sách passenger theo vé
             List<PassengerTicketDto> passengerTicketDtos = new ArrayList<>();
             TripDto tripDto = tripMapper.toDto(tickets.get(0).getTrip());
-            for (Ticket ticket : tickets) {
-                // Lọc theo CMND/CCCD nếu có
-                if (identityCard != null && !identityCard.isBlank()
-                        && !ticket.getPassengerIdCard().equalsIgnoreCase(identityCard)) {
-                    continue;
-                }
 
+            for (Ticket ticket : tickets) {
                 PassengerTicketDto passengerTicketDto = new PassengerTicketDto();
-                passengerTicketDto.setSeatId(
-                        ticket.getSeat().getSeatId());
+                passengerTicketDto.setSeatId(ticket.getSeat().getSeatId());
                 passengerTicketDto.setPassengerName(ticket.getPassengerName());
                 passengerTicketDto.setIdentityCard(ticket.getPassengerIdCard());
                 passengerTicketDto.setSeatNumbers(ticket.getSeat().getSeatNumber());
@@ -321,11 +317,13 @@ public class BookingServiceImpl implements BookingService {
 
                 passengerTicketDtos.add(passengerTicketDto);
             }
+
             dto.setTripDto(tripDto);
             dto.setPassengerTicketDtos(passengerTicketDtos);
             return dto;
         });
     }
+
 
     //chua toi uu
     @Override
@@ -780,6 +778,39 @@ public class BookingServiceImpl implements BookingService {
         // log.debug("📘 Logged [{}] [{}:{}] - {}", logAction.action(), logAction.entity(), entityId, desString);
         systemLogService.logAction(logg);
         return true;
+    }
+    private double calculatePromotionDiscountRate(String promotionCode, double originalAmount) {
+        Promotion promotion = promotionRepository.findByPromotionCodeAndStatus(promotionCode, Promotion.Status.active)
+                .orElseThrow(() -> new RuntimeException("Invalid or inactive promotion code"));
+
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(promotion.getStartDate()) || now.isAfter(promotion.getEndDate())) {
+            throw new RuntimeException("Promotion is expired or not active yet");
+        }
+
+        if (promotion.getUsageLimit() != null &&
+                promotion.getUsageCount() != null &&
+                promotion.getUsageCount() >= promotion.getUsageLimit()) {
+            throw new RuntimeException("Promotion usage limit exceeded");
+        }
+
+        if (promotion.getMinimumPurchase() != null && originalAmount < promotion.getMinimumPurchase()) {
+            throw new RuntimeException("Order does not meet minimum purchase requirement");
+        }
+
+        double discountAmount = 0.0;
+
+        if (promotion.getDiscountType() == Promotion.DiscountType.percentage) {
+            discountAmount = originalAmount * (promotion.getDiscountValue() / 100.0);
+            if (promotion.getMaximumDiscount() != null) {
+                discountAmount = Math.min(discountAmount, promotion.getMaximumDiscount());
+            }
+        } else if (promotion.getDiscountType() == Promotion.DiscountType.fixed_amount) {
+            discountAmount = Math.min(promotion.getDiscountValue(), originalAmount); // không được âm
+        }
+
+        // Trả về tỉ lệ phần trăm đã giảm (để chia đều cho từng vé)
+        return discountAmount / originalAmount;
     }
 
 }

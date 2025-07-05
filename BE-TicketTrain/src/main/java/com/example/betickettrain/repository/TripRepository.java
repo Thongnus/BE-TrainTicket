@@ -77,11 +77,11 @@ public interface TripRepository extends JpaRepository<Trip, Integer>, JpaSpecifi
             
             """)
     List<TrainRouteProjection> findPopularRoutes(@Param("limit") Integer limit);
-    @Query("SELECT COUNT(t) FROM Trip t WHERE t.status = 'active'")
-    int countActiveTrips();
+    @Query("SELECT COUNT(t) FROM Trip t WHERE t.status = 'completed'")
+    int countCompletedTrips();
 
-    @Query("SELECT COUNT(t) FROM Trip t WHERE t.status = 'active' AND t.departureTime BETWEEN :start AND :end")
-    int countActiveTripsBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+    @Query("SELECT COUNT(t) FROM Trip t WHERE t.status = 'completed' AND t.departureTime BETWEEN :start AND :end")
+    int counttCompletedTripsBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
 
     //Update trips to completed if they are scheduled and expired

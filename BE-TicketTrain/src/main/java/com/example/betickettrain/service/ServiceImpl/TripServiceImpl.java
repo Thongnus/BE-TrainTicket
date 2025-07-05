@@ -3,13 +3,11 @@ package com.example.betickettrain.service.ServiceImpl;
 import com.example.betickettrain.anotation.LogAction;
 import com.example.betickettrain.dto.*;
 import com.example.betickettrain.entity.*;
+import com.example.betickettrain.exceptions.BusinessException;
 import com.example.betickettrain.exceptions.ErrorCode;
 import com.example.betickettrain.mapper.TripMapper;
 import com.example.betickettrain.repository.*;
-import com.example.betickettrain.service.EmailService;
-import com.example.betickettrain.service.GenericCacheService;
-import com.example.betickettrain.service.NotificationService;
-import com.example.betickettrain.service.TripService;
+import com.example.betickettrain.service.*;
 import com.example.betickettrain.util.Constants;
 import com.example.betickettrain.util.utils;
 import jakarta.persistence.criteria.Join;
@@ -24,6 +22,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -40,7 +39,7 @@ public class TripServiceImpl implements TripService  {
     private final RouteRepository routeRepository;
     private final CustomTripRepository customTripRepository;
     private final GenericCacheService cacheService;
-    private final TripMapper tripMapper; // ✅ NEW: Mapper
+    private final TripMapper tripMapper;
     private final TripScheduleRepository tripScheduleRepository;
     private final RouteStationRepository routeStationRepository;
     private final SystemLogRepository systemLogRepository;
@@ -51,6 +50,10 @@ public class TripServiceImpl implements TripService  {
     private final TicketRepository ticketRepository;
     private final BookingRepository bookingRepository;
     private final PaymentRepository paymentRepository;
+    private final RefundRequestRepository refundRequestRepository;
+    private final RefundPolicyRepository refundPolicyRepository;
+    private final BookingPromotionRepository bookingPromotionRepository;
+
     @Override
     @LogAction(action = Constants.Action.CREATE,entity = "Trip", description = " Create a trip")
     @Transactional
@@ -253,59 +256,112 @@ public class TripServiceImpl implements TripService  {
 
         trip.setStatus(Trip.Status.cancelled);
         trip.setCancelledReason(cancelReason);
-       Trip saveTrip = tripRepository.save(trip);
-        // 2. Huỷ tất cả vé liên quan
+        Trip savedTrip = tripRepository.save(trip);
+
+        // 1. Cập nhật tất cả vé liên quan sang trạng thái pending_refund
         List<Ticket> affectedTickets = ticketRepository.findAllByTrip_TripId(tripId);
         for (Ticket ticket : affectedTickets) {
-            ticket.setStatus(Ticket.Status.cancelled);
+            ticket.setStatus(Ticket.Status.pending_refund);
         }
         ticketRepository.saveAll(affectedTickets);
 
-        // 3. Cập nhật booking liên quan
+        // 2. Gom các Booking bị ảnh hưởng
         Set<Booking> affectedBookings = affectedTickets.stream()
                 .map(Ticket::getBooking)
                 .collect(Collectors.toSet());
 
         List<Payment> paymentsToUpdate = new ArrayList<>();
+
         for (Booking booking : affectedBookings) {
-            booking.setBookingStatus(Booking.BookingStatus.cancelled);
+            List<Ticket> bookingTickets = ticketRepository.findByBookingBookingId(booking.getBookingId());
+            double totalTicketPrice = bookingTickets.stream().mapToDouble(Ticket::getTicketPrice).sum();
 
-            if (booking.getPaymentStatus() == Booking.PaymentStatus.paid) {
+            // Tính giảm giá nếu có
+            double totalDiscount = 0;
+            double netAmount = totalTicketPrice;
 
-                // Tìm các thanh toán liên quan để cập nhật trạng thái
-                List<Payment> payments = paymentRepository.findAllByBooking_BookingId(booking.getBookingId());
-                for (Payment payment : payments) {
-                    if (payment.getStatus() == Payment.Status.completed) {
-                        payment.setStatus(Payment.Status.refund_pending);
-                        paymentsToUpdate.add(payment);
-                    }
+            BookingPromotion promotion = bookingPromotionRepository.findBookingPromotionByBooking_BookingId(booking.getBookingId());
+            if (promotion != null) {
+                totalDiscount = promotion.getDiscountAmount();
+                if (totalDiscount < 0 || totalDiscount > totalTicketPrice) {
+                    throw new BusinessException(ErrorCode.INVALID_DISCOUNT.code, "Giảm giá không hợp lệ.");
                 }
+                netAmount -= totalDiscount;
             }
+
+            // Tìm chuyến sớm nhất để tính giờ cách giờ khởi hành
+            LocalDateTime departureTime = bookingTickets.stream()
+                    .map(t -> t.getTrip().getDepartureTime())
+                    .min(LocalDateTime::compareTo)
+                    .orElse(LocalDateTime.now());
+
+            long hoursLeft = Duration.between(LocalDateTime.now(), departureTime).toHours();
+
+            RefundPolicy policy = refundPolicyRepository.findAllByOrderByHoursBeforeDepartureDesc()
+                    .stream()
+                    .filter(p -> hoursLeft >= p.getHoursBeforeDeparture())
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessException(ErrorCode.REFUND_POLICY.code, ErrorCode.REFUND_POLICY.message));
+
+            double refundAmount = netAmount * (policy.getRefundPercent() / 100.0);
+
+            // Cập nhật trạng thái booking và payment
+            booking.setBookingStatus(Booking.BookingStatus.refund_processing);
+
+            Payment payment = paymentRepository.findByBooking(booking);
+            if (payment.getStatus() == Payment.Status.completed) {
+                payment.setStatus(Payment.Status.refund_pending);
+                paymentsToUpdate.add(payment);
+            }
+
+            // Tạo bản ghi RefundRequest
+            RefundRequest refundRequest = RefundRequest.builder()
+                    .booking(booking)
+                    .payment(payment)
+                    .refundPolicy(policy)
+                    .originalAmount(totalTicketPrice)
+                    .discountAmount(totalDiscount)
+                    .netAmount(netAmount)
+                    .refundAmount(refundAmount)
+                    .refundPercentage(policy.getRefundPercent())
+                    .hoursBeforeDeparture(hoursLeft)
+                    .status(RefundRequest.RefundStatus.pending)
+                    .build();
+
+            refundRequestRepository.save(refundRequest);
         }
+
         bookingRepository.saveAll(affectedBookings);
         paymentRepository.saveAll(paymentsToUpdate);
+
         // Ghi log hệ thống
         SystemLog logg = SystemLog.builder()
                 .user(utils.getUser())
                 .action(Constants.Action.UPDATE)
                 .entityType("trip")
-                .entityId( tripId)
+                .entityId(tripId)
                 .description("Đánh dấu cancelled " + trip.getTripCode() + " (" + cancelReason + ")")
                 .ipAddress(request.getRemoteAddr())
                 .userAgent(request.getHeader("User-Agent"))
-                //   .logTime(LocalDateTime.now())
                 .build();
         systemLogRepository.save(logg);
+
+        // Gửi thông báo
         List<String> userEmails = tripRepository.findEffectiveEmailsByTripId(tripId);
         if (userEmails.isEmpty()) {
             log.warn("Không tìm thấy người dùng nào đã đặt vé trên chuyến tàu {}", trip.getTripCode());
             return;
         }
-        cacheService.remove(Constants.Cache.CACHE_TRIP, tripId);
-        cacheService.remove(Constants.Cache.CACHE_TRIP, ALL_TRIPS_KEY);
-        notificationService.notifyUsers(saveTrip,userEmails);
 
+//        cacheService.remove(Constants.Cache.CACHE_TRIP, tripId);
+//        cacheService.remove(Constants.Cache.CACHE_TRIP, ALL_TRIPS_KEY);
+        cacheService.clearCache(Constants.Cache.CACHE_TRIP);
+        cacheService.clearCache(Constants.Cache.CACHE_BOOKING);
+        cacheService.clearCache(Constants.Cache.CACHE_PAYMENT);
+
+        notificationService.notifyUsers(savedTrip, userEmails);
     }
+
 
     @Override
     public Page<TripDto> findTrips(String search, String status, Pageable pageable) {
@@ -331,7 +387,7 @@ public class TripServiceImpl implements TripService  {
                     Trip.Status tripStatus = Trip.Status.valueOf(status.toLowerCase());
                     predicates.add(cb.equal(root.get("status"), tripStatus));
                 } catch (IllegalArgumentException e) {
-                    // Nếu truyền sai enum (ví dụ: "running") → bỏ lọc
+//                    throw  new BusinessException()
                     log.warn("Trạng thái chuyến tàu không hợp lệ: " + status);
                 }
             }

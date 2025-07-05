@@ -48,11 +48,9 @@ public class BookingController {
     public ResponseEntity<Page<BookingDto>> searchBookings(
             @RequestParam(required = false) String search,
             @RequestParam(required = false, defaultValue = "all") String bookingStatus,
-            @RequestParam(required = false, defaultValue = "all") String paymentStatus,
-            @RequestParam(required = false) String identityCard,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Page<BookingDto> result = bookingService.findBookings(search, bookingStatus, paymentStatus,identityCard, pageable);
+        Page<BookingDto> result = bookingService.findBookings(search, bookingStatus, pageable);
         return ResponseEntity.ok(result);
     }
 
@@ -66,7 +64,7 @@ public class BookingController {
     }
 
     @GetMapping("/checkin")
-    @PreAuthorize("hasRole('ADMIN')") // Chỉ cho phép người dùng đã đăng nhập
+    @PreAuthorize("hasRole('ADMIN')") //
     //tam thoi chua build 1 app rieng gianh cho viec check-in nên tạm thòi quét thì tự động xác nhận check-in
     public ResponseEntity<?> checkInBooking(@RequestParam("code") String bookingCode) {
         try {
@@ -91,7 +89,7 @@ public class BookingController {
         }
     }
     @PostMapping("/cancel/{bookingId}")
-    @PreAuthorize("hasRole('ADMIN')") // Chỉ cho phép người dùng đã đăng nhập
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> cancelBooking(@PathVariable() Integer bookingId) {
         boolean isCancelled = bookingService.cancelBookingByAdmin(bookingId);
         if (isCancelled) {

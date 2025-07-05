@@ -47,11 +47,11 @@ public class DashboardServiceImpl implements DashboardService {
         double cancellationRateLastMonth = totalTicketsLastMonth > 0 ? (cancelledLastMonth * 100.0 / totalTicketsLastMonth) : 0;
         double cancellationRateChange = cancellationRateLastMonth > 0 ? ((cancellationRate - cancellationRateLastMonth) / cancellationRateLastMonth) * 100 : 0;
 
-        int activeTrips = tripRepository.countActiveTrips();
-        int activeTripsLastMonth = tripRepository.countActiveTripsBetween(lastMonth, startOfMonth);
-        int tripsChange = activeTripsLastMonth > 0 ? (activeTrips - activeTripsLastMonth) : activeTrips;
+        int completedTripsTrips = tripRepository.countCompletedTrips();
+        int completedTripsLastMonth = tripRepository.counttCompletedTripsBetween(lastMonth, startOfMonth);
+        int tripsChange = completedTripsLastMonth > 0 ? (completedTripsTrips - completedTripsLastMonth) : completedTripsTrips;
 
-        return DashboardOverviewResponse.builder().totalRevenue(totalRevenue).revenueGrowth(Math.round(revenueGrowth * 100.0) / 100.0).totalTickets(totalTickets).ticketsLast24h(ticketsLast24h).cancellationRate(Math.round(cancellationRate * 100.0) / 100.0).cancellationRateChange(Math.round(cancellationRateChange * 100.0) / 100.0).activeTrips(activeTrips).tripsChange(tripsChange).build();
+        return DashboardOverviewResponse.builder().totalRevenue(totalRevenue).revenueGrowth(Math.round(revenueGrowth * 100.0) / 100.0).totalTickets(totalTickets).ticketsLast24h(ticketsLast24h).cancellationRate(Math.round(cancellationRate * 100.0) / 100.0).cancellationRateChange(Math.round(cancellationRateChange * 100.0) / 100.0).activeTrips(completedTripsTrips).tripsChange(tripsChange).build();
     }
 
     @Override
