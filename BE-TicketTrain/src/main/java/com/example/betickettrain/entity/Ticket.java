@@ -57,7 +57,7 @@ public class Ticket {
     private String ticketCode;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "ticket_status", nullable = false, columnDefinition = "ENUM('hold','booked', 'checked_in', 'cancelled', 'used', 'expired') DEFAULT 'booked'")
+    @Column(name = "ticket_status", nullable = false, columnDefinition = "ENUM('hold','booked', 'checked_in', 'cancelled', 'used', 'expired' ,'pending_refund') DEFAULT 'booked'")
     private Status status;
 
     @Column(name = "boarding_time")

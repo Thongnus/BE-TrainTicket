@@ -15,6 +15,7 @@ import com.example.betickettrain.service.*;
 import com.example.betickettrain.util.Constants;
 import com.example.betickettrain.util.DateUtils;
 import com.example.betickettrain.util.TemplateMail;
+import com.example.betickettrain.util.utils;
 import jakarta.mail.MessagingException;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -762,13 +763,13 @@ public class BookingServiceImpl implements BookingService {
         ticketRepository.saveAll(tickets);
 //        List<String> userEmails = tripRepository.findEffectiveEmailsByTripId(tickets.get(0).getTrip().getTripId());
         notificationService.notifyBookingCancellation(booking.getContactEmail(),booking,tickets.get(0).getTrip().getTripCode(), Constants.REASON_CANCELLED);
-        Long userId= SystemLogAspect.getCurrentUserId();
+        User user= utils.getUser();
         SystemLog logg = SystemLog.builder()
-                .user(userId != null ? User.builder().userId(userId).build() : null)
+                .user(user)
                 .action(Constants.Action.UPDATE)
-                .entityType("Train")
+                .entityType("Booking")
                 .entityId(Math.toIntExact(bookingId))
-                .description("Update Status Booking: " + bookingId)
+                .description("Cancel Status Booking: " + bookingId)
                 //  .ipAddress(request.getRemoteAddr())
                 //  .userAgent(request.getHeader("User-Agent"))
                 //   .logTime(LocalDateTime.now())

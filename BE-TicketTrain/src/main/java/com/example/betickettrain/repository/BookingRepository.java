@@ -24,10 +24,10 @@ public interface BookingRepository extends JpaRepository<Booking, Integer>, JpaS
     @Query("SELECT COALESCE(SUM(b.totalAmount), 0) FROM Booking b WHERE b.paymentStatus = 'paid' AND b.bookingDate BETWEEN :start AND :end")
     double sumRevenue(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    @Query("SELECT COUNT(b) FROM Booking b WHERE b.bookingDate BETWEEN :start AND :end")
+    @Query("SELECT COUNT(b) FROM Ticket b WHERE  b.status in ('booked', 'checked_in', 'used') and b.createdAt BETWEEN :start AND :end")
     int countTickets(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    @Query("SELECT COUNT(b) FROM Booking b WHERE b.bookingStatus = 'cancelled' AND b.bookingDate BETWEEN :start AND :end")
+    @Query("SELECT COUNT(b) FROM Ticket b WHERE b.status = 'cancelled' AND b.createdAt BETWEEN :start AND :end")
     int countCancelledTickets(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
 

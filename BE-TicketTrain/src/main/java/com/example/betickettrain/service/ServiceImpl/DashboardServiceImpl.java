@@ -69,7 +69,7 @@ public class DashboardServiceImpl implements DashboardService {
             LocalDateTime start = date.atStartOfDay();
             LocalDateTime end = date.plusDays(1).atStartOfDay();
 
-            double dailyRevenue = ticketRepository.sumRevenueBetween(start, end);
+            double dailyRevenue = bookingRepository.sumRevenue(start, end);
             int dailyTickets = ticketRepository.countTicketsBetween(start, end);
 
             dates.add(date.toString());

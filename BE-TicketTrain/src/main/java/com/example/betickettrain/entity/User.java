@@ -74,10 +74,9 @@ public class User  implements UserDetails {
     private String status; // Thêm status
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        Collection<SimpleGrantedAuthority> authorities = roles.stream()
+        return roles.stream()
                 .map(role -> new SimpleGrantedAuthority(role.getName()))
                 .collect(Collectors.toSet());
-        return authorities;
     }
     public enum Status {active, inactive
     }
