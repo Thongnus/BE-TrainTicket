@@ -505,6 +505,7 @@ public class BookingServiceImpl implements BookingService {
     /**
      * Xử lý thanh toán thành công
      */
+    @Transactional()
     public boolean handleSuccessfulPayment(Booking booking) {
         try {
             // Cập nhật trạng thái booking
@@ -519,6 +520,15 @@ public class BookingServiceImpl implements BookingService {
                 ticket.setStatus(Ticket.Status.booked);
                 // Xóa hold expire time vì đã thanh toán
                 ticket.setHoldExpireTime(null);
+                systemLogService.logAction(SystemLog.builder()
+                        .user(booking.getUser())
+                        .action("Xác nhận vé")
+                        .entityType("Ticket")
+                        .entityId(ticket.getTicketId())
+                        .description("Vé " + ticket.getSeat().getSeatNumber() +
+                                " đã được xác nhận cho chuyến " + ticket.getTrip().getTripCode() +
+                                ", mã đặt vé: " + booking.getBookingCode())
+                        .build());
             }
             ticketRepository.saveAll(tickets);
 
@@ -545,11 +555,21 @@ public class BookingServiceImpl implements BookingService {
                 log.warn("Failed to send confirmation email for booking: {}", booking.getBookingCode(), e);
                 // Không throw exception vì thanh toán đã thành công
             }
-
+            systemLogService.logAction(SystemLog.builder()
+                    .user(booking.getUser()) // giả sử booking có user
+                    .action("Thanh toán thành công")
+                    .entityType("Booking")
+                    .entityId(booking.getBookingId())
+                    .description("Thanh toán thành công cho mã đặt vé: " + booking.getBookingCode())
+                    .ipAddress(null) // có thể set nếu biết
+                    .userAgent(null) // có thể set nếu biết
+                    .build());
+            log.debug("📘 Sent log to WebSocket");
             log.info("Payment successful for booking: {}", booking.getBookingCode());
             return true;
 
         } catch (Exception e) {
+
             log.error("Error processing successful payment for booking: {}", booking.getBookingCode(), e);
             throw e;
         }

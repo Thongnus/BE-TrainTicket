@@ -1,5 +1,6 @@
 package com.example.betickettrain.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -44,5 +45,20 @@ public class RedisCacheService {
     public void deleteByPattern(String pattern) {
         redisTemplate.keys(KEY_PREFIX + pattern + "*").forEach(redisTemplate::delete);
     }
+    public <T> T getCachedData(String key, TypeReference<T> typeRef) {
+        Object value = getCachedData(key);  // giá trị ban đầu từ Redis
+        if (value == null) return null;
 
+        // Nếu Redis trả ra JSON string thì deserialize luôn
+        if (value instanceof String) {
+            try {
+                return objectMapper.readValue((String) value, typeRef);
+            } catch (Exception e) {
+                throw new RuntimeException("❌ Lỗi khi đọc dữ liệu từ Redis (typeRef): " + e.getMessage(), e);
+            }
+        }
+
+        // Nếu không phải String thì convert trực tiếp
+        return objectMapper.convertValue(value, typeRef);
+    }
 }

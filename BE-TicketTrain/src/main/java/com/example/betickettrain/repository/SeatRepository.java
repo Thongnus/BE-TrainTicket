@@ -41,7 +41,7 @@ public interface SeatRepository extends JpaRepository<Seat, Integer> {
             "WHERE s.seatId IN :seatIds")
     List<Seat> findAllByIdWithCarriageAndTrain(@Param("seatIds") List<Integer> seatIds);
 
-    List<Seat> findByCarriageCarriageId(Integer carriageCarriageId);
+    List<Seat> findByCarriageCarriageIdOrderBySeatNumberAsc(Integer carriageCarriageId);
 
      List<Seat>  findBySeatIdIn(List<Integer> id);
 

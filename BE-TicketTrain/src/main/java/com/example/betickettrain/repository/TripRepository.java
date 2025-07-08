@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.query.Procedure;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface TripRepository extends JpaRepository<Trip, Integer>, JpaSpecificationExecutor<Trip> {
     boolean existsByTripCode(String tripCode);
@@ -109,5 +110,6 @@ public interface TripRepository extends JpaRepository<Trip, Integer>, JpaSpecifi
       )
 """, nativeQuery = true)
     List<String> findEffectiveEmailsByTripId(@Param("tripId") Integer tripId);
-
+    @Query("SELECT  t.tripCode FROM Trip t")
+    Set<String> findAllTripCodes();
 }

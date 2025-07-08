@@ -10,15 +10,13 @@ import com.example.betickettrain.repository.StationRepository;
 import com.example.betickettrain.service.GenericCacheService;
 import com.example.betickettrain.service.StationService;
 import com.example.betickettrain.util.Constants;
+import com.fasterxml.jackson.core.type.TypeReference;
 import io.netty.util.Constant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

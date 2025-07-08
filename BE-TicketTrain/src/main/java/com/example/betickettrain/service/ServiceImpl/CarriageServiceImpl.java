@@ -182,7 +182,7 @@ public class CarriageServiceImpl implements CarriageService {
         List<CarriageDto> carriages = getAllCarriages();
 
         List<CarriageWithSeatsDto> result = carriages.stream().map(carriage -> {
-            List<SeatDto> seats = seatRepository.findByCarriageCarriageId(carriage.getCarriageId()).stream().map(seatMapper::toDto) // ✅ fix chỗ này
+            List<SeatDto> seats = seatRepository.findByCarriageCarriageIdOrderBySeatNumberAsc(carriage.getCarriageId()).stream().map(seatMapper::toDto) // ✅ fix chỗ này
                     .collect(Collectors.toList());
 
             return new CarriageWithSeatsDto(carriage, seats);

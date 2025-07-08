@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.query.Procedure;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -37,4 +38,6 @@ public interface TripService {
     void markTripCancel(Integer tripId,String cancelReason);
 
     Page<TripDto> findTrips(String search, String status, Pageable pageable);
+    void importTripsFromExcel(MultipartFile file);
+
 }

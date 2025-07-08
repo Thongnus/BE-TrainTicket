@@ -1,8 +1,14 @@
 package com.example.betickettrain.util;
 
+import com.example.betickettrain.exceptions.BusinessException;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +43,25 @@ public class XlssfHelper {
                 Object value = ((List<?>) data.get(keys.get(j))).get(i);
                 row.createCell(j).setCellValue(value != null ? value.toString() : "");
             }
+        }
+    }
+    public static LocalDateTime getDateTimeFromCell(Cell cell, int rowNumber, String fieldName) {
+        if (cell == null) {
+            throw new BusinessException("Dòng " + (rowNumber + 1) + ": " + fieldName + " không được để trống.");
+        }
+
+        try {
+            if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
+                return cell.getLocalDateTimeCellValue();
+            } else if (cell.getCellType() == CellType.STRING) {
+                String text = cell.getStringCellValue().trim();
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                return LocalDateTime.parse(text, formatter);
+            } else {
+                throw new BusinessException("Dòng " + (rowNumber + 1) + ": " + fieldName + " không đúng định dạng.");
+            }
+        } catch (Exception e) {
+            throw new BusinessException("Dòng " + (rowNumber + 1) + ": lỗi parse " + fieldName + " → " + e.getMessage());
         }
     }
 

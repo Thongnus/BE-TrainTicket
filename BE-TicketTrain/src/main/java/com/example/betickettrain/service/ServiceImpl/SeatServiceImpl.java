@@ -70,7 +70,7 @@ public class SeatServiceImpl implements SeatService {
             dto.setCarriageType(String.valueOf(carriage.getCarriageType()));
             dto.setCapacity(carriage.getCapacity());
 
-            List<SeatDto> seatDtos = seatRepository.findByCarriageCarriageId(carriage.getCarriageId()).stream().map(seat -> {
+            List<SeatDto> seatDtos = seatRepository.findByCarriageCarriageIdOrderBySeatNumberAsc(carriage.getCarriageId()).stream().map(seat -> {
                 SeatDto seatDto = new SeatDto();
                 seatDto.setSeatId(seat.getSeatId());
                 seatDto.setSeatNumber(seat.getSeatNumber());
@@ -203,7 +203,7 @@ public class SeatServiceImpl implements SeatService {
 
     @Override
     public List<SeatDto> getSeatsByCarriageId(Integer id) {
-        return  seatRepository.findByCarriageCarriageId(id).stream()
+        return  seatRepository.findByCarriageCarriageIdOrderBySeatNumberAsc(id).stream()
                 .map(seatMapper::toDto)
                 .collect(Collectors.toList());
     }

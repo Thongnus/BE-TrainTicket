@@ -9,6 +9,7 @@ import com.example.betickettrain.mapper.TripMapper;
 import com.example.betickettrain.repository.*;
 import com.example.betickettrain.service.*;
 import com.example.betickettrain.util.Constants;
+import com.example.betickettrain.util.XlssfHelper;
 import com.example.betickettrain.util.utils;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
@@ -16,12 +17,20 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -398,6 +407,76 @@ public class TripServiceImpl implements TripService  {
         return tripRepository.findAll(spec, pageable).map(tripMapper::toDto);
     }
 
+    @Override
+    public void importTripsFromExcel(MultipartFile file) {
+        try (InputStream is = file.getInputStream()) {
+            Workbook workbook = new XSSFWorkbook(is);
+            Sheet sheet = workbook.getSheetAt(0);
+
+            List<Trip> trips = new ArrayList<>();
+            Set<String> tripCodesInFile = new HashSet<>();
+            Set<String> existingTripCodes = tripRepository.findAllTripCodes();
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null || row.getCell(0) == null) continue;
+
+                String tripCode = row.getCell(0).getStringCellValue().trim();
+                if (tripCode.isEmpty()) {
+                    throw new BusinessException("Dòng " + (i + 1) + ": tripCode không được để trống.");
+                }
+
+                // ✅ Kiểm tra trùng mã chuyến trong file
+                if (!tripCodesInFile.add(tripCode)) {
+                    throw new BusinessException("Dòng " + (i + 1) + ": tripCode bị trùng trong file Excel.");
+                }
+
+                // ✅ Kiểm tra trùng mã chuyến trong DB
+                if (existingTripCodes.contains(tripCode)) {
+                    throw new BusinessException("Dòng " + (i + 1) + ": tripCode '" + tripCode + "' đã tồn tại trong hệ thống.");
+                }
+                Integer routeId = (int) row.getCell(1).getNumericCellValue();
+                Long trainId = (long) row.getCell(2).getNumericCellValue();
+                LocalDateTime departureTime = XlssfHelper.getDateTimeFromCell(row.getCell(3), i, "departureTime");
+                LocalDateTime arrivalTime = XlssfHelper.getDateTimeFromCell(row.getCell(4), i, "departureTime");
+                String statusStr = row.getCell(5).getStringCellValue().trim();
+                Integer delayMinutes = (int) row.getCell(6).getNumericCellValue();
+                String delayReason = getStringCellValue(row.getCell(7));
+                String cancelledReason = getStringCellValue(row.getCell(8));
+                // ✅ Validate arrival > departure
+                if (!arrivalTime.isAfter(departureTime)) {
+                    throw new BusinessException("Dòng " + (i + 1) + ": arrivalTime phải sau departureTime.");
+                }
+                Route route = routeRepository.findById(routeId)
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy Route ID: " + routeId));
+
+                Train train = trainRepository.findById(trainId)
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy Train ID: " + trainId));
+
+                Trip trip = Trip.builder()
+                        .tripCode(tripCode)
+                        .route(route)
+                        .train(train)
+                        .departureTime(departureTime)
+                        .arrivalTime(arrivalTime)
+                        .status(Trip.Status.valueOf(statusStr)) // validate nếu cần
+                        .delayMinutes(delayMinutes)
+                        .delayReason(delayReason)
+                        .cancelledReason(cancelledReason)
+                        .build();
+
+                trips.add(trip);
+            }
+
+            tripRepository.saveAll(trips);
+
+        } catch (IOException e) {
+            throw new BusinessException("Lỗi khi đọc file Excel: " + e.getMessage());
+        }
+    }
+
+    private String getStringCellValue(Cell cell) {
+        return (cell != null) ? cell.getStringCellValue().trim() : null;
+    }
 
 
 }

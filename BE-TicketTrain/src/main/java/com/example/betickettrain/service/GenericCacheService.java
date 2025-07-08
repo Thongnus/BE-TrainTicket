@@ -1,5 +1,6 @@
 package com.example.betickettrain.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -135,5 +136,22 @@ public class GenericCacheService {
     public <K> Iterable<K> getKeys(String cacheName) {
         Map<Object, Object> cache = caches.get(cacheName);
         return cache != null ? (Iterable<K>) cache.keySet() : null;
+    }
+    public <K, V> V get(String cacheName, K key, TypeReference<V> typeRef) {
+        Map<Object, Object> cache = caches.computeIfAbsent(cacheName, k -> new ConcurrentHashMap<>());
+
+        // Có thể thêm kiểm tra local cache ở đây nếu bạn muốn
+
+        String redisKey = buildRedisKey(cacheName, key);
+        V value = redisCacheService.getCachedData(redisKey, typeRef);
+
+        if (value != null) {
+            // cache.put(key, value); // Nếu muốn ghi lại local cache
+            log.info("☁️  Lấy từ REDIS cache [{}] bằng TypeReference: key = {}", cacheName, key);
+            return value;
+        }
+
+        log.info("❌ Không có trong LOCAL & REDIS cache [{}]: key = {}", cacheName, key);
+        return null;
     }
 }

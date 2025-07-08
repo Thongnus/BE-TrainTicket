@@ -1,5 +1,6 @@
 package com.example.betickettrain.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,5 +23,6 @@ public class SystemLogDto implements Serializable {
     String description;
     String ipAddress;
     String userAgent;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime logTime;
 }

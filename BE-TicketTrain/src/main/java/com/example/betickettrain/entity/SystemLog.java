@@ -23,7 +23,7 @@ public class SystemLog {
     @Column(name = "log_id") // Tên cột trong DB
     private Integer logId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id") // Tên cột trong DB
     private User user;
 

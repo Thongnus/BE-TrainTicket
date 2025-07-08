@@ -13,10 +13,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/trips")
@@ -149,4 +151,17 @@ public class TripController {
             return Sort.by("departureTime").descending();
         }
     }
+    @PostMapping("/import-excel")
+    public ResponseEntity<?> importTripsFromExcel(@RequestParam("file") MultipartFile file) {
+        try {
+            tripService.importTripsFromExcel(file);
+            return ResponseEntity.ok(Map.of("sucess","Import danh sách chuyến tàu thành công."));
+        } catch (Exception e) {
+            e.getCause();
+            return ResponseEntity.badRequest().body(Map.of("failed","Import thất bại: " + e.getMessage()));
+        }
+    }
+
+
+
 }
