@@ -1,6 +1,7 @@
 package com.example.betickettrain.service.ServiceImpl;
 
 import com.example.betickettrain.anotation.LogAction;
+import com.example.betickettrain.dto.PageResult;
 import com.example.betickettrain.dto.StationDto;
 import com.example.betickettrain.entity.Station;
 
@@ -153,6 +154,7 @@ public class StationServiceImpl implements StationService {
         
         // Invalidate caches
         cacheService.remove(CACHE_STATION, ALL_STATIONS_KEY);
+        cacheService.clearCache(CACHE_STATION);
         if (savedStation.getStatus() != null) {
             cacheService.remove(CACHE_STATION, "status_" + savedStation.getStatus());
         }
@@ -185,6 +187,7 @@ public class StationServiceImpl implements StationService {
         // Invalidate caches
         cacheService.remove(CACHE_STATION, id);
         cacheService.remove(CACHE_STATION, ALL_STATIONS_KEY);
+        cacheService.clearCache(CACHE_STATION); // goi moi nay la dc
     //    cacheService.remove(CACHE_STATION,ALL_PAGE_STATIONS_KEY);
         // Invalidate status caches if status changed
         if (oldStatus != null) {
@@ -212,7 +215,7 @@ public class StationServiceImpl implements StationService {
         // Invalidate caches
         cacheService.remove(CACHE_STATION, id);
         cacheService.remove(CACHE_STATION, ALL_STATIONS_KEY);
-       // cacheService.remove(CACHE_STATION,ALL_PAGE_STATIONS_KEY);
+        cacheService.clearCache(CACHE_STATION); // goi moi nay la dc
         if (status != null) {
             cacheService.remove(CACHE_STATION, "status_" + status);
         }
@@ -220,17 +223,34 @@ public class StationServiceImpl implements StationService {
 
     @Override
     public Page<StationDto> getStationsPaged(int page, int size) {
-//        Page<StationDto> cachedStations = cacheService.get(CACHE_STATION, ALL_PAGE_STATIONS_KEY, Page.class);
-//
-//        if (cachedStations != null) {
-//            return cachedStations;
-//        }
+        // Cách 1: Đọc kiểu PageResult từ Redis (an toàn hơn)
+        PageResult<StationDto> pageFromCache = cacheService.get(CACHE_STATION, ALL_PAGE_STATIONS_KEY, PageResult.class);
+
+        if (pageFromCache != null) {
+            return new PageImpl<>(
+                    pageFromCache.getContent(),
+                    PageRequest.of(pageFromCache.getPageNumber(), pageFromCache.getPageSize()),
+                    pageFromCache.getTotalElements()
+            );
+        }
+
+        // Không có trong cache → truy vấn DB
         Pageable pageable = PageRequest.of(page, size, Sort.by("stationName").ascending());
         Page<Station> stationPage = stationRepository.findAll(pageable);
-        log.info(" ️️Lấy thông tin train từ DB");
-        // Save to cache
-     //   cacheService.put(CACHE_STATION, ALL_PAGE_STATIONS_KEY, stationPage);
+        Page<StationDto> dtoPage = stationPage.map(stationMapper::toDto);
 
-        return stationPage.map(stationMapper::toDto);
+        // Lưu vào Redis ở dạng PageResult (vì PageImpl deserialize khó)
+        PageResult<StationDto> pageResult = new PageResult<>(
+                dtoPage.getContent(),
+                dtoPage.getNumber(),
+                dtoPage.getSize(),
+                dtoPage.getTotalElements(),
+                dtoPage.getTotalPages(),
+                dtoPage.isLast(),
+                dtoPage.isFirst()
+        );
+        cacheService.put(CACHE_STATION, ALL_PAGE_STATIONS_KEY, pageResult);
+
+        return dtoPage;
     }
 }

@@ -62,7 +62,7 @@ public class TripServiceImpl implements TripService  {
     private final RefundRequestRepository refundRequestRepository;
     private final RefundPolicyRepository refundPolicyRepository;
     private final BookingPromotionRepository bookingPromotionRepository;
-
+    private final SystemLogService systemLogService;
     @Override
     @LogAction(action = Constants.Action.CREATE,entity = "Trip", description = " Create a trip")
     @Transactional
@@ -85,6 +85,17 @@ public class TripServiceImpl implements TripService  {
         Trip saved = tripRepository.save(trip);
         generateTripSchedulesFromRoute(saved);
         cacheService.clearCache(Constants.Cache.CACHE_TRIP);
+        SystemLog logg = SystemLog.builder()
+                .user(utils.getUser())
+                .action(Constants.Action.CREATE)
+                .entityType("trip")
+                .entityId(saved.getTripId())
+                .description("Tạo chuyến tàu " + saved.getTripCode())
+                .ipAddress(request.getRemoteAddr())
+                .userAgent(request.getHeader("User-Agent"))
+                //   .logTime(LocalDateTime.now())
+                .build();
+        systemLogService.logAction(logg);
         return tripMapper.toDto(saved);
     }
 
@@ -353,8 +364,8 @@ public class TripServiceImpl implements TripService  {
                 .ipAddress(request.getRemoteAddr())
                 .userAgent(request.getHeader("User-Agent"))
                 .build();
-        systemLogRepository.save(logg);
-
+//        systemLogRepository.save(logg);
+        systemLogService.logAction(logg);
         // Gửi thông báo
         List<String> userEmails = tripRepository.findEffectiveEmailsByTripId(tripId);
         if (userEmails.isEmpty()) {

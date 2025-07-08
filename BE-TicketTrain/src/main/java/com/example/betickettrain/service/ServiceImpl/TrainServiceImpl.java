@@ -98,7 +98,7 @@ public class TrainServiceImpl implements TrainService {
                 //   .logTime(LocalDateTime.now())
                 .build();
 
-        systemLogRepository.save(logg);
+//        systemLogRepository.save(logg);
        // log.debug("📘 Logged [{}] [{}:{}] - {}", logAction.action(), logAction.entity(), entityId, desString);
         systemLogService.logAction(logg);
         log.debug("📘 Sent log to WebSocket: {}", logg);
